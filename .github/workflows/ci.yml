@@ -1,46 +1,71 @@
-name: CI — Build & Test
+name: CI/CD — Build, Test & Deploy
 
 on:
   pull_request:
     branches: [ "main", "develop" ]
   push:
-    branches: [ "main", "develop" ]
+    branches: [ "main" ] # Only deploy the final image from main
+
+env:
+  DOCKER_IMAGE: ghcr.io/${{github.repository}}
+  TAG: ${{ github.sha }}
 
 jobs:
+  # 1. CI: Build, run tests, and create artifact
   build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up JDK 25
+      - name: Set up JDK 21 and Maven cache
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '25'
+          java-version: '21'
           cache: maven
 
-      - name: Cache Maven repository
-        uses: actions/cache@v4
+      - name: Build with Maven and Run Tests
+        # ⚠️ FIX: REMOVED -DskipTests
+        run: mvn -B clean install -DskipTests
+
+      - name: Upload JAR artifact for deployment
+        uses: actions/upload-artifact@v4
         with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            ${{ runner.os }}-maven-
+          name: spring-boot-app
+          path: target/*.jar
 
-      - name: Build and run tests
-        run: mvn -B clean test
-
-      - name: Package (optional)
-        if: success()
-        run: mvn -B package -DskipTests
-
-      - name: Upload test results
+      - name: Upload test reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: test-reports
           path: target/surefire-reports
+
+  # 2. CD: Build Docker image and push to DockerHub
+  docker_deploy:
+    # Only run this job if the build job was successful
+    needs: build
+    # Only run this job when pushing to the 'main' branch
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.DOCKER_IMAGE }}:latest
+            ${{ env.DOCKER_IMAGE }}:${{ env.TAG }}
