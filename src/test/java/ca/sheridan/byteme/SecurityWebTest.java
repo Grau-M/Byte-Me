@@ -184,7 +184,8 @@ class SecurityWebTest {
  
         mockMvc.perform(post("/logout").session(session).with(csrf()))
             .andExpect(status().is3xxRedirection())
-            .andExpect(redirectedUrl("/?logout"));
+            .andExpect(redirectedUrl("/"));
+
  
         mockMvc.perform(get("/dashboard").session(session))
             .andExpect(status().is3xxRedirection())
