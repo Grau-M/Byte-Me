@@ -10,7 +10,7 @@ services:
       - mongo_data:/data/db
 
   backend:
-    image: richinlearns/cookigramdemo-backend:v1
+    image: richinlearns/cookigramdemo-backend:v5
     container_name: cookigramdemo-backend
     ports:
       - "8080:8080"
