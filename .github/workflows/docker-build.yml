@@ -16,7 +16,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           java-version: '25'
-          distribution: 'zulu'
+          distribution: 'microsoft'
 
       - name: Build with Maven
         run: mvn -B clean package -DskipTests
