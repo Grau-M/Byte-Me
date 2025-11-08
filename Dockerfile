@@ -1,5 +1,5 @@
 # stage 1: build
-FROM maven:3.9.9-eclipse-temurin-25 AS build
+FROM eclipse-temurin:25-jdk-jammy AS build 
 WORKDIR /workspace
 COPY pom.xml mvnw ./
 COPY .mvn .mvn
