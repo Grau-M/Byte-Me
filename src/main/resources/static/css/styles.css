@@ -200,6 +200,10 @@ html.dark-mode .trust {
   color: rgba(255, 255, 255, 0.6);
 }
 
+.bottom-spacer {
+    height: var(--bottom-nav-h);
+}
+
 /* ✅ Offset all non-home pages for fixed top navbar */
 body:not(.home){
   padding-top: var(--nav-h);

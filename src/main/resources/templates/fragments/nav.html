@@ -32,26 +32,37 @@
 </div>
 
 <!-- Bottom navigation fragment -->
-<div xmlns:th="http://www.thymeleaf.org" th:fragment="bottomNav">
-  <nav class="navbar navbar-light bg-white fixed-bottom border-top bottom-nav"
-       style="height: var(--bottom-nav-h);">
+<div xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security" th:fragment="bottomNav">
+  <nav class="navbar navbar-light bg-white fixed-bottom border-top shadow-sm">
     <div class="container-fluid">
-      <div class="w-100 d-flex justify-content-around">
-        <a class="nav-link text-center" href="/dashboard">
-          <i class="bi bi-columns-gap d-block fs-4"></i>
+      <!-- Admin/Staff Nav -->
+      <div sec:authorize="hasAuthority('STAFF') or hasAuthority('ADMIN')" class="w-100 d-flex justify-content-around">
+        <a class="nav-link text-center py-1" href="/dashboard">
+          <i class="bi bi-columns-gap d-block fs-5"></i>
           <small>Dashboard</small>
         </a>
-        <a class="nav-link text-center" href="/orders">
-          <i class="bi bi-receipt d-block fs-4"></i>
+        <a class="nav-link text-center py-1" href="/orders">
+          <i class="bi bi-receipt d-block fs-5"></i>
           <small>Orders</small>
         </a>
-        <a class="nav-link text-center" href="/schedule">
-          <i class="bi bi-calendar-check d-block fs-4"></i>
+        <a class="nav-link text-center py-1" href="/schedule">
+          <i class="bi bi-calendar-check d-block fs-5"></i>
           <small>Schedule</small>
         </a>
-        <a class="nav-link text-center" href="/reports">
-          <i class="bi bi-graph-up d-block fs-4"></i>
+        <a class="nav-link text-center py-1" href="/reports">
+          <i class="bi bi-graph-up d-block fs-5"></i>
           <small>Reports</small>
+        </a>
+      </div>
+      <!-- Customer Nav -->
+      <div sec:authorize="hasAuthority('CUSTOMER')" class="w-100 d-flex justify-content-around">
+        <a class="nav-link text-center py-1" href="/dashboard">
+          <i class="bi bi-columns-gap d-block fs-5"></i>
+          <small>Dashboard</small>
+        </a>
+        <a class="nav-link text-center py-1" href="/order">
+          <i class="bi bi-receipt d-block fs-5"></i>
+          <small>Order</small>
         </a>
       </div>
     </div>
