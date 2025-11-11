@@ -7,7 +7,6 @@ import org.springframework.web.context.annotation.SessionScope;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 /**
  * A session-scoped service to manage the shopping cart.
@@ -46,7 +45,7 @@ public class CartService implements Serializable {
      * Gets all items currently in the cart.
      * @return A list of CartItems.
      */
-    public List<CartItem> getItems() {
+    public List<CartItem> getCartItems() {
         return new ArrayList<>(items); // Return a copy to prevent external modification
     }
 
@@ -58,6 +57,22 @@ public class CartService implements Serializable {
         return items.stream()
                 .mapToDouble(CartItem::price)
                 .sum();
+    }
+
+    /**
+     * Calculates the tax on the subtotal.
+     * @return The tax as a double.
+     */
+    public double getTax() {
+        return getSubtotal() * 0.13;
+    }
+
+    /**
+     * Calculates the total of the cart.
+     * @return The total as a double.
+     */
+    public double getTotal() {
+        return getSubtotal() + getTax();
     }
 
     /**

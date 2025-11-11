@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Cookiegram Bakery – Giant Cookie, Custom Message</title>
+  <title>Cookiegram Bakery - Giant Cookie, Custom Message</title>
 
   <!-- Google Font -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -20,6 +20,14 @@
 
   <!-- Custom CSS -->
   <link rel="stylesheet" th:href="@{/css/styles.css}">
+  <script>
+    (function() {
+      const theme = localStorage.getItem('theme');
+      if (theme === 'dark') {
+        document.documentElement.classList.add('dark-mode');
+      }
+    })();
+  </script>
 </head>
 
 <!-- IMPORTANT: keep class="home" so other pages get the navbar offset -->

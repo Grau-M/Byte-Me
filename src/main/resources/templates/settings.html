@@ -16,6 +16,14 @@
 
   <!-- Your site CSS -->
   <link rel="stylesheet" th:href="@{/css/styles.css}">
+  <script>
+    (function() {
+      const theme = localStorage.getItem('theme');
+      if (theme === 'dark') {
+        document.documentElement.classList.add('dark-mode');
+      }
+    })();
+  </script>
   <style>
     /* one-liner spacer util in case it's not in styles.css */
     .bottom-spacer{ height: var(--bottom-nav-h); }
@@ -279,20 +287,9 @@
           crossorigin="anonymous"></script>
   <script th:src="@{/js/scripts.js}"></script>
   <script>
-    // Initialize theme and timezone
+    // Initialize timezone
     document.addEventListener('DOMContentLoaded', function() {
-      const darkModeSwitch = document.getElementById('darkModeSwitch');
       const timezoneSelect = document.getElementById('timezoneSelect');
-      const darkThemeEnabled = document.getElementById('darkThemeEnabled');
-
-      // Initialize dark mode switch
-      if (darkModeSwitch && darkThemeEnabled) {
-        darkModeSwitch.checked = darkThemeEnabled.value === 'true';
-        if (darkThemeEnabled.value === 'true') {
-          document.documentElement.classList.add('dark-mode');
-          document.body.classList.add('dark-mode');
-        }
-      }
 
       // Initialize timezone
       if (timezoneSelect) {

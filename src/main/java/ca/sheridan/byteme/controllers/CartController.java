@@ -30,13 +30,17 @@ public class CartController {
         
         // --- NO MORE MOCK DATA ---
         // We get the real items from the session-scoped service
-        List<CartItem> items = cartService.getItems();
+        List<CartItem> items = cartService.getCartItems();
         double subtotal = cartService.getSubtotal();
+        double tax = cartService.getTax();
+        double total = cartService.getTotal();
         int cartCount = cartService.getCartCount();
 
         // Add real data to the model for Thymeleaf to use
         model.addAttribute("cartItems", items);
         model.addAttribute("subtotal", subtotal);
+        model.addAttribute("tax", tax);
+        model.addAttribute("total", total);
         model.addAttribute("cartCount", cartCount); // For the navbar bubble
 
         // This tells Spring to render the "cart.html" template
