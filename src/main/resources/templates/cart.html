@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cookiegram Bakery - Your Cart</title>
+
+    <!-- Google Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          xintegrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+          crossorigin="anonymous">
+
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+
+    <style>
+      body {
+        font-family: 'Poppins', sans-serif;
+        background-color: #f8f9fa; 
+      }
+      .nav-glass {
+        background-color: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+      }
+      main {
+        padding-top: 7rem;
+        padding-bottom: 7rem;
+      }
+      .color-swatch {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        border: 1px solid #ccc;
+        vertical-align: middle;
+        margin-right: 8px;
+        background-color: #eee; /* default */
+      }
+    </style>
+</head>
+<body>
+
+  <!-- Top Navigation Bar -->
+  <nav class="navbar navbar-expand-lg navbar-light bg-white fixed-top shadow-sm nav-glass">
+    <div class="container">
+        <a class="navbar-brand fw-bold d-flex align-items-center" href="/">
+        <i class="bi bi-cookie me-2 text-warning"></i>
+        <span>Cookiegram Bakery</span>
+        </a>
+
+        <!-- Unauthenticated Users -->
+        <div class="d-flex ms-auto" th:if="${not #authorization.expression('isAuthenticated()')}">
+        <a href="/cart" class="btn btn-outline-secondary position-relative me-3">
+            <i class="bi bi-cart"></i>
+            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" 
+                  th:if="${cartCount != null && cartCount > 0}" 
+                  th:text="${cartCount}">
+            </span>
+        </a>
+        <a href="/login" class="btn btn-outline-primary me-2">Log In</a>
+        <a href="/register" class="btn btn-primary">Register</a>
+        </div>
+
+        <!-- Authenticated Users -->
+        <div class="d-flex ms-auto" th:if="${#authorization.expression('isAuthenticated()')}">
+        <a href="/cart" class="btn btn-outline-secondary position-relative me-3">
+            <i class="bi bi-cart"></i>
+            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" 
+                  th:if="${cartCount != null && cartCount > 0}" 
+                  th:text="${cartCount}">
+            </span>
+        </a>
+        <a href="/dashboard" class="btn btn-outline-primary me-2">Dashboard</a>
+        <form th:action="@{/logout}" method="post" class="d-inline">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+            <button type="submit" class="btn btn-primary">Log Out</button>
+        </form>
+        </div>
+    </div>
+  </nav>
+
+  <!-- Cart Message Toast (e.g., for item removal) -->
+  <div class="position-fixed top-0 start-50 translate-middle-x p-3" style="z-index:1080;"
+       th:if="${cartMessage}">
+    <div class="toast align-items-center text-bg-success border-0 show" role="alert" aria-live="assertive" aria-atomic="true">
+      <div class="d-flex">
+        <div class="toast-body">
+          <i class="bi bi-check-circle-fill me-2"></i>
+          <span th:text="${cartMessage}"></span>
+        </div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <main class="container">
+    <div class="row g-5">
+      
+      <!-- Check if cart is empty -->
+      <div th:if="${cartItems == null || cartItems.isEmpty()}" class="col-12 text-center">
+          <div class="card border-0 shadow-sm rounded-3">
+              <div class="card-body p-5">
+                  <h1 class="h3 fw-bold">Your Cart is Empty</h1>
+                  <p class="text-muted">Looks like you haven't added any cookies yet.</p>
+                  <a href="/order" class="btn btn-primary btn-lg mt-3">
+                      <i class="bi bi-cookie me-2"></i>
+                      Order a Cookie
+                  </a>
+              </div>
+          </div>
+      </div>
+
+      <!-- If cart has items, show them -->
+      <div class="col-lg-8" th:if="${cartItems != null && !cartItems.isEmpty()}">
+        <h1 class="h2 fw-bold mb-4">Your Cart</h1>
+        
+        <div class="card border-0 shadow-sm rounded-3">
+          <div class="list-group list-group-flush">
+            
+            <!-- Loop over each item in the cart -->
+            <div th:each="item : ${cartItems}" class="list-group-item p-4">
+              <div class="row align-items-center">
+                <div class="col-2 col-md-1">
+                  <!-- Simple cookie icon placeholder -->
+                  <h3 class="text-warning"><i class="bi bi-cookie"></i></h3>
+                </div>
+                <div class="col-10 col-md-5">
+                  <h5 class="mb-1" th:text="${item.name}">Large Cookiegram</h5>
+                  <small class="text-muted" th:text="${item.message}">"Happy Birthday!"</small>
+                </div>
+                <div class="col-6 col-md-3 mt-2 mt-md-0">
+                  <span class="color-swatch" 
+                        th:styleappend="|background-color: ${item.color == 'white' ? '#eee' : item.color}|"></span>
+                  <span th:text="${item.color}">Cool Blue</span>
+                </div>
+                <div class="col-4 col-md-2 mt-2 mt-md-0 text-end">
+                  <span class="fw-bold" th:text="|${'$'}${item.price}|">$24.99</span>
+                </div>
+                <div class="col-2 col-md-1 mt-2 mt-md-0 text-end">
+                  <!-- Remove Item Form -->
+                  <form th:action="@{/cart/remove}" method="POST" class="d-inline">
+                    <input type="hidden" name="itemId" th:value="${item.id}" />
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                    <button type="submit" class="btn btn-outline-danger btn-sm" title="Remove item">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </form>
+                </div>
+              </div>
+            </div>
+            
+          </div>
+        </div>
+      </div>
+
+      <!-- Order Summary (Only shows if cart is not empty) -->
+      <div class="col-lg-4" th:if="${cartItems != null && !cartItems.isEmpty()}">
+        <h1 class="h2 fw-bold mb-4">Summary</h1>
+        <div class="card border-0 shadow-sm rounded-3">
+          <div class="card-body p-4">
+            <ul class="list-group list-group-flush">
+              <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                Subtotal
+                <span class="fw-bold" th:text="|${'$'}${subtotal}|">$24.99</span>
+              </li>
+              <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                Taxes
+                <span class="fw-bold">TBD</span>
+              </li>
+              <li class="list-group-item d-flex justify-content-between align-items-center px-0 fw-bold h5">
+                Estimated Total
+                <span th:text="|${'$'}${subtotal}|">$24.99</span>
+              </li>
+            </ul>
+            <a href="#" class="btn btn-primary btn-lg w-100 mt-4 shadow disabled">
+              Proceed to Checkout
+            </a>
+            <p class="text-muted text-center small mt-2">(Checkout coming soon!)</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="py-4 text-center text-muted small bg-white border-top">
+    © <span th:text="${#dates.format(#dates.createNow(), 'yyyy')}">2025</span> Cookiegram Bakery · Family-owned in Oakville
+  </footer>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+          xintegrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+          crossorigin="anonymous"></script>
+
+  <!-- Auto-hide toast script -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const cartToastEl = document.querySelector('.toast[th\\:if="${cartMessage}"]');
+        if (cartToastEl) {
+            setTimeout(() => {
+                const cartToast = bootstrap.Toast.getOrCreateInstance(cartToastEl);
+                setTimeout(() => {
+                    cartToast.hide();
+                }, 5000); 
+            }, 100); 
+        }
+    });
+  </script>
+
+</body>
+</html>
