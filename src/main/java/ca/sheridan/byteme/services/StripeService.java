@@ -3,6 +3,7 @@ package ca.sheridan.byteme.services;
 import com.stripe.Stripe;
 import com.stripe.exception.StripeException;
 import com.stripe.model.Charge;
+import com.stripe.model.Customer; // <-- ADD THIS IMPORT
 import ca.sheridan.byteme.models.ChargeRequest;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -22,27 +23,27 @@ public class StripeService {
         Stripe.apiKey = secretKey;
     }
 
-    // --- Replace your 'charge' method with this one ---
+    // --- THIS 'charge' METHOD IS NOW UPDATED ---
     public Charge charge(ChargeRequest chargeRequest, String customerEmail, String customerName) throws StripeException {
         
+        // --- STEP 1: Create a Stripe Customer ---
+        // We use the token (source) to create the customer and their payment method
+        Map<String, Object> customerParams = new HashMap<>();
+        customerParams.put("name", customerName);
+        customerParams.put("email", customerEmail);
+        customerParams.put("source", chargeRequest.getStripeToken());
+        
+        Customer customer = Customer.create(customerParams);
+
+        // --- STEP 2: Charge the Customer ---
+        // Now we charge the Scustomer ID instead of the token
         Map<String, Object> chargeParams = new HashMap<>();
         chargeParams.put("amount", chargeRequest.getAmount());
         chargeParams.put("currency", chargeRequest.getCurrency());
         chargeParams.put("description", chargeRequest.getDescription());
-        chargeParams.put("source", chargeRequest.getStripeToken());
-        
-        // This tells Stripe to send a receipt to this address
-        chargeParams.put("receipt_email", customerEmail);
+        chargeParams.put("customer", customer.getId()); // <-- THE KEY CHANGE
 
-        // --- UPDATED METADATA ---
-        // This attaches the data to the charge so you can see it
-        // in your Stripe dashboard's "Metadata" section.
-        Map<String, String> metadata = new HashMap<>();
-        metadata.put("customer_name", customerName);
-        metadata.put("customer_email", customerEmail); // Added email here
-        chargeParams.put("metadata", metadata);
-
-        // We removed the System.out.println from here
+        // (We don't need metadata anymore, as the charge is linked to the customer)
 
         return Charge.create(chargeParams);
     }
