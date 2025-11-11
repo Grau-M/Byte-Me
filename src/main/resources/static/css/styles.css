@@ -384,6 +384,21 @@ footer{
   border-top:1px solid #e5e7eb;
 }
 
+/* Sticky footer: fixed when page has no scroll, static when scrollable */
+.footer-sticky {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  z-index: 1000;
+}
+
+.footer-sticky.has-scroll {
+  position: static;
+  margin-top: 2rem;
+}
+
 .dark-mode footer {
   background: var(--dark-card);
   border-color: var(--dark-border);

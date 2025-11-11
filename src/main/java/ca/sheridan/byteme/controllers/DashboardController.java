@@ -13,17 +13,25 @@ import org.springframework.web.bind.annotation.GetMapping;
 
 import ca.sheridan.byteme.beans.Role;
 import ca.sheridan.byteme.beans.User;
-import ca.sheridan.byteme.services.PromotionService;   // <-- add
+import ca.sheridan.byteme.services.CartService;
+import ca.sheridan.byteme.services.PromotionService;
 import lombok.AllArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 
 @AllArgsConstructor
 @Controller
 public class DashboardController {
 
-    private final PromotionService promotionService;   // <-- add
+    private final PromotionService promotionService;
+    
+    @Autowired
+    private final CartService cartService;
 
     @GetMapping("/dashboard")
     public String getDashboard(Model model, Principal principal) {
+
+        // --- Add Cart Count ---
+        model.addAttribute("cartCount", cartService.getCartCount());
 
         // --- 1. Dynamic Clock (unchanged) ---
         ZoneId userZone = ZoneId.of("America/Toronto");

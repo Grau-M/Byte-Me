@@ -11,6 +11,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.util.Map;
+import java.util.HashMap;
+
 @Controller
 public class OrderController {
 
@@ -23,9 +26,8 @@ public class OrderController {
     /**
      * Shows the main order page at /order
      */
-    @GetMapping("/order") // <-- This now matches your path
+    @GetMapping("/order")
     public String showOrderPage(Model model) {
-        // This line will now work!
         model.addAttribute("cartCount", cartService.getCartCount());
         
         if (!model.containsAttribute("lastMessage")) {
@@ -35,7 +37,7 @@ public class OrderController {
             model.addAttribute("lastColor", "");
         }
         
-        return "order"; // Renders order.html
+        return "order";
     }
 
     /**
@@ -46,36 +48,67 @@ public class OrderController {
                             @RequestParam String productName,
                             @RequestParam double price,
                             @RequestParam String cookieMessage,
-                            @RequestParam String icingColor,
+                            @RequestParam("icingColor") String icingColorValue,
                             RedirectAttributes redirectAttributes) {
 
-        // 1. Check for profanity
         if (profanityFilterService.hasProfanity(cookieMessage)) {
-            // Profanity detected!
             redirectAttributes.addFlashAttribute("cartError", "Your message contains inappropriate language and was not added to the cart.");
             redirectAttributes.addFlashAttribute("lastMessage", cookieMessage);
-            redirectAttributes.addFlashAttribute("lastColor", icingColor);
-            
-            // *** FIX: Redirect back to /order ***
+            redirectAttributes.addFlashAttribute("lastColor", icingColorValue);
             return "redirect:/order";
         }
 
-        // 2. No profanity, add to cart
+        Map<String, String> colorDetails = getIcingColorDetails(icingColorValue);
+
         CartItem item = new CartItem(
-                productId + "_" + cookieMessage.hashCode(), 
+                productId + "_" + cookieMessage.hashCode(),
                 productName,
                 cookieMessage,
-                icingColor,
-                "",
+                colorDetails.get("name"),
+                colorDetails.get("hex"),
                 price
         );
         cartService.addItem(item);
 
-        // 3. Add success message
         redirectAttributes.addFlashAttribute("cartSuccess", "Your cookie was added to the cart!");
-
-        // 4. *** FIX: Redirect back to /order ***
-        //    (You can change this to "redirect:/cart" if you prefer)
         return "redirect:/order";
+    }
+
+    /**
+     * Helper method to get the full name and hex code for a given color value.
+     */
+    private Map<String, String> getIcingColorDetails(String colorValue) {
+        Map<String, String> details = new HashMap<>();
+        switch (colorValue) {
+            case "white":
+                details.put("name", "Classic White");
+                details.put("hex", "#FFFFFF");
+                break;
+            case "pink":
+                details.put("name", "Pretty Pink");
+                details.put("hex", "hotpink");
+                break;
+            case "red":
+                details.put("name", "Vibrant Red");
+                details.put("hex", "red");
+                break;
+            case "blue":
+                details.put("name", "Cool Blue");
+                details.put("hex", "blue");
+                break;
+            case "green":
+                details.put("name", "Festive Green");
+                details.put("hex", "green");
+                break;
+            case "chocolate":
+                details.put("name", "Chocolate");
+                details.put("hex", "#8B5A2B");
+                break;
+            default:
+                details.put("name", "Unknown");
+                details.put("hex", "#eee");
+                break;
+        }
+        return details;
     }
 }

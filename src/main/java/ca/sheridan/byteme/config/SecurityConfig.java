@@ -41,7 +41,8 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Excepti
                 "/",
                 "/login",
                 "/register",
-                "/css/**","/js/**","/images/**","/favicon.ico"
+                "/css/**","/js/**","/images/**","/favicon.ico",
+                "/order"
             ).permitAll()
             .anyRequest().authenticated()
         )
