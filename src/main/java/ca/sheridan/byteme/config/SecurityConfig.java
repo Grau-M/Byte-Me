@@ -23,11 +23,11 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Excepti
         .csrf(csrf -> csrf.ignoringRequestMatchers("/h2-console/**"))
         .headers(headers -> headers.frameOptions(frame -> frame.disable()))
         .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-        .formLogin(form -> form
+        /* .formLogin(form -> form
             .loginPage("/login")
             .defaultSuccessUrl("/dashboard", true)
             .permitAll()
-        )
+        ) */
         .logout(logout -> logout
             .logoutSuccessUrl("/")
             .invalidateHttpSession(true)
