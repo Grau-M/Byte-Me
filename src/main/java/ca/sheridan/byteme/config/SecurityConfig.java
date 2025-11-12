@@ -41,7 +41,8 @@ public class SecurityConfig {
                     "/login",
                     "/register",
                     "/css/**","/js/**","/images/**","/favicon.ico",
-                    "/order", "/add-to-cart", "/checkout", "/charge", "/result"
+                    "/order", "/add-to-cart", "/checkout", "/charge", "/result",
+                    "/api/shipping/calculate"
                 ).permitAll()
                 .requestMatchers("/checkout").permitAll()
                 .anyRequest().authenticated()

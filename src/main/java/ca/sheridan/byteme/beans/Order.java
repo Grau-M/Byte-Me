@@ -24,7 +24,9 @@ public class Order {
     private List<CartItem> items;
     private double subtotal;
     private double tax;
+    private double shippingCost;
     private double total;
     private LocalDateTime orderDate;
     private String chargeId;
+    private ShippingAddress shippingAddress;
 }
