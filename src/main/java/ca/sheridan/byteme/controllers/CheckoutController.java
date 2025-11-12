@@ -17,6 +17,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.time.LocalDateTime;
 
@@ -42,37 +43,44 @@ public class CheckoutController {
         model.addAttribute("tax", cartService.getTax());
         model.addAttribute("total", cartService.getTotal());
         model.addAttribute("amount", (int) (cartService.getTotal() * 100));
+        model.addAttribute("cartItems", cartService.getCartItems());
         return "checkout";
     }
 
     @PostMapping("/charge")
-    public String charge(ChargeRequest chargeRequest, Model model) throws StripeException {
+    public String charge(ChargeRequest chargeRequest,
+                         @RequestParam(name = "guestName", required = false) String guestName,
+                         @RequestParam(name = "guestEmail", required = false) String guestEmail,
+                         Model model) throws StripeException {
         chargeRequest.setDescription("Cookiegram Order");
         chargeRequest.setCurrency(ChargeRequest.Currency.CAD);
 
-        // Get the logged-in user
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        User user = (User) authentication.getPrincipal();
+        String customerEmail;
+        String customerName;
+        User user = null;
 
-        // Get customer details from the user object
-        String customerEmail = user.getEmail(); // Assuming your User bean has getEmail()
-        
-        // **IMPORTANT**: Adjust "getFirstName()" and "getLastName()" if your
-        // User bean uses different method names (e.g., getFullName())
-        String customerName = user.getName(); 
+        if (authentication != null && authentication.getPrincipal() instanceof User) {
+            user = (User) authentication.getPrincipal();
+            customerEmail = user.getEmail();
+            customerName = user.getName();
+        } else {
+            customerEmail = guestEmail;
+            customerName = guestName;
+        }
 
-        // Handle case where user has no email
+        boolean isGuest = user == null;
+
         if (customerEmail == null || customerEmail.isBlank()) {
-            model.addAttribute("error", "Payment Failed: No email address is associated with your account.");
+            model.addAttribute("error", "Payment Failed: Email address is required.");
+            model.addAttribute("isGuest", isGuest);
             return "result";
         }
 
-        // Call the updated service method
         Charge charge = stripeService.charge(chargeRequest, customerEmail, customerName);
 
-        // ... (rest of your order creation logic) ...
         Order order = Order.builder()
-                .userId(user.getId())
+                .userId(user != null ? user.getId() : null) // Handle guest user ID
                 .items(cartService.getCartItems())
                 .subtotal(cartService.getSubtotal())
                 .tax(cartService.getTax())
@@ -89,11 +97,15 @@ public class CheckoutController {
 
         model.addAttribute("status", charge.getStatus());
         model.addAttribute("amount", charge.getAmount() / 100.0);
+        model.addAttribute("isGuest", isGuest);
         return "result";
     }
 
     @ExceptionHandler(StripeException.class)
     public String handleError(Model model, StripeException ex) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        boolean isGuest = authentication == null || !(authentication.getPrincipal() instanceof User);
+        model.addAttribute("isGuest", isGuest);
         model.addAttribute("error", ex.getMessage());
         return "result";
     }

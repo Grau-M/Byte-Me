@@ -13,10 +13,7 @@ import java.util.List;
  * Each user gets their own instance of this bean for their session.
  */
 @Service
-@SessionScope
-public class CartService implements Serializable {
-
-    private static final long serialVersionUID = 1L;
+public class CartService {
 
     // A list to hold the items in the cart
     private final List<CartItem> items = new ArrayList<>();

@@ -48,7 +48,8 @@
                     <h2 class="card-title" th:if="${error}">Payment Failed!</h2>
                     <p th:if="${status}" th:text="'Your payment of $' + ${amount} + ' was successful.'"></p>
                     <p th:if="${error}" th:text="${error}"></p>
-                    <a href="/dashboard" class="btn btn-primary">Back to Dashboard</a>
+                    <a th:if="${!isGuest}" href="/dashboard" class="btn btn-primary">Back to Dashboard</a>
+                    <a th:if="${isGuest}" href="/" class="btn btn-primary">Back to Home</a>
                 </div>
             </div>
         </div>

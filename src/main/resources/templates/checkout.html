@@ -31,6 +31,16 @@
         padding-top: 7rem;
         padding-bottom: 7rem;
       }
+      .color-swatch {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        border: 1px solid #ccc;
+        vertical-align: middle;
+        margin-right: 8px;
+        background-color: #eee; /* default */
+      }
     </style>
 </head>
 <body>
@@ -50,6 +60,17 @@
 
                         <input type="hidden" name="amount" th:value="${amount}" />
 
+                        <div th:if="${not #authorization.expression('isAuthenticated()')}">
+                            <div class="mb-3">
+                                <label for="guestName" class="form-label">Full Name</label>
+                                <input type="text" id="guestName" name="guestName" class="form-control" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="guestEmail" class="form-label">Email</label>
+                                <input type="email" id="guestEmail" name="guestEmail" class="form-control" required>
+                            </div>
+                        </div>
+
                         <div class="mb-3">
                             <label for="card-element" class="form-label">
                                 Credit or debit card
@@ -67,6 +88,26 @@
             <h2 class="mb-4">Order Summary</h2>
             <div class="card">
                 <div class="card-body">
+                    <div class="list-group list-group-flush mb-3">
+                        <div th:each="item : ${cartItems}" class="list-group-item p-3">
+                            <div class="row align-items-center">
+                                <div class="col-2">
+                                    <img th:src="@{/images/yourmessagehere-yellow-2022.png}" alt="Cookie" class="img-fluid" style="max-width: 50px;">
+                                </div>
+                                <div class="col-7">
+                                    <h6 class="mb-0" th:text="${item.name}">Large Cookiegram</h6>
+                                    <small class="text-muted" th:text="${item.message}">"Happy Birthday!"</small>
+                                    <div>
+                                        <span class="color-swatch" th:style="'background-color: ' + ${item.icingColorHex}"></span>
+                                        <small th:text="${item.icingColorName}">Cool Blue</small>
+                                    </div>
+                                </div>
+                                <div class="col-3 text-end">
+                                    <span class="fw-bold" th:text="|${'$'}${item.price}|">$24.99</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                     <ul class="list-group list-group-flush">
                         <li class="list-group-item d-flex justify-content-between align-items-center px-0">
                             Subtotal

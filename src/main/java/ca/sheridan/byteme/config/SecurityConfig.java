@@ -22,7 +22,7 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Excepti
     http
         .csrf(csrf -> csrf.ignoringRequestMatchers("/h2-console/**"))
         .headers(headers -> headers.frameOptions(frame -> frame.disable()))
-        .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
+        .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .formLogin(form -> form
             .loginPage("/login")
             .defaultSuccessUrl("/dashboard", true)
@@ -42,8 +42,9 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Excepti
                 "/login",
                 "/register",
                 "/css/**","/js/**","/images/**","/favicon.ico",
-                "/order"
+                "/order", "/add-to-cart", "/checkout", "/charge", "/result"
             ).permitAll()
+            .requestMatchers("/checkout").permitAll()
             .anyRequest().authenticated()
         )
         .authenticationProvider(authenticationProvider)

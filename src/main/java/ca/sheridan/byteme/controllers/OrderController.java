@@ -49,6 +49,8 @@ public class OrderController {
                             @RequestParam double price,
                             @RequestParam String cookieMessage,
                             @RequestParam("icingColor") String icingColorValue,
+                            // --- 1. ADD THIS NEW PARAMETER --- (NEW)
+                            @RequestParam(name = "buyNow", required = false, defaultValue = "false") boolean buyNow,
                             RedirectAttributes redirectAttributes) {
 
         if (profanityFilterService.hasProfanity(cookieMessage)) {
@@ -71,7 +73,15 @@ public class OrderController {
         cartService.addItem(item);
 
         redirectAttributes.addFlashAttribute("cartSuccess", "Your cookie was added to the cart!");
-        return "redirect:/order";
+        
+        // --- 2. CHANGE THIS REDIRECT LOGIC --- (CHANGED)
+        if (buyNow) {
+            // Guest user (buyNow=true) -> go to checkout
+            return "redirect:/checkout";
+        } else {
+            // Logged-in user (buyNow=false) -> stay on order page
+            return "redirect:/order";
+        }
     }
 
     /**
