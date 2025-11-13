@@ -75,14 +75,14 @@ class SecurityWebTest {
     void loginPageShowsFormFields() throws Exception {
         mockMvc.perform(get("/login"))
             .andExpect(status().isOk())
-            .andExpect(content().string(containsString("name=\"username\"")))
+            .andExpect(content().string(containsString("name=\"email\"")))
             .andExpect(content().string(containsString("name=\"password\"")))
             .andExpect(content().string(containsString("Login - Cookiegram Bakery")));
     }
  
     @Test
     void adminLoginShowsAdminDashboard() throws Exception {
-        MvcResult result = mockMvc.perform(formLogin().user(adminEmail).password(rawPassword))
+        MvcResult result = mockMvc.perform(formLogin("/login").userParameter("email").user(adminEmail).password(rawPassword))
             .andExpect(status().is3xxRedirection())
             .andExpect(redirectedUrl("/dashboard"))
             .andReturn();
@@ -96,7 +96,7 @@ class SecurityWebTest {
  
     @Test
     void staffLoginShowsStaffDashboard() throws Exception {
-        MvcResult result = mockMvc.perform(formLogin().user(staffEmail).password(rawPassword))
+        MvcResult result = mockMvc.perform(formLogin("/login").userParameter("email").user(staffEmail).password(rawPassword))
             .andExpect(status().is3xxRedirection())
             .andExpect(redirectedUrl("/dashboard"))
             .andReturn();
@@ -110,7 +110,7 @@ class SecurityWebTest {
  
     @Test
     void customerLoginShowsCustomerDashboard() throws Exception {
-        MvcResult result = mockMvc.perform(formLogin().user(customerEmail).password(rawPassword))
+        MvcResult result = mockMvc.perform(formLogin("/login").userParameter("email").user(customerEmail).password(rawPassword))
             .andExpect(status().is3xxRedirection())
             .andExpect(redirectedUrl("/dashboard"))
             .andReturn();
@@ -119,12 +119,12 @@ class SecurityWebTest {
         mockMvc.perform(get("/dashboard").session(session))
             .andExpect(status().isOk())
             .andExpect(content().string(containsString("Customer Dashboard")))
-            .andExpect(content().string(containsString("View My Orders")));
+            .andExpect(content().string(containsString("Your Orders")));
     }
  
     @Test
     void staffShouldNotSeeAdminContent() throws Exception {
-        MvcResult result = mockMvc.perform(formLogin().user(staffEmail).password(rawPassword))
+        MvcResult result = mockMvc.perform(formLogin("/login").userParameter("email").user(staffEmail).password(rawPassword))
             .andReturn();
  
         MockHttpSession session = (MockHttpSession) result.getRequest().getSession(false);
@@ -135,7 +135,7 @@ class SecurityWebTest {
  
     @Test
     void customerShouldNotSeeStaffOrAdminContent() throws Exception {
-        MvcResult result = mockMvc.perform(formLogin().user(customerEmail).password(rawPassword))
+        MvcResult result = mockMvc.perform(formLogin("/login").userParameter("email").user(customerEmail).password(rawPassword))
             .andReturn();
  
         MockHttpSession session = (MockHttpSession) result.getRequest().getSession(false);
@@ -151,7 +151,7 @@ class SecurityWebTest {
     }
     @Test
     void customerBlockedFromAdminContent() throws Exception {
-        MvcResult result = mockMvc.perform(formLogin().user(customerEmail).password(rawPassword))
+        MvcResult result = mockMvc.perform(formLogin("/login").userParameter("email").user(customerEmail).password(rawPassword))
             .andReturn();
  
         MockHttpSession session = (MockHttpSession) result.getRequest().getSession(false);
@@ -163,28 +163,28 @@ class SecurityWebTest {
  
     @Test
     void loginFailsWithInvalidPassword() throws Exception {
-        mockMvc.perform(formLogin().user(adminEmail).password("WrongPassword"))
+        mockMvc.perform(formLogin("/login").userParameter("email").user(adminEmail).password("WrongPassword"))
             .andExpect(status().is3xxRedirection())
             .andExpect(redirectedUrl("/login?error"));
     }
  
     @Test
     void loginFailsWithUnknownUser() throws Exception {
-        mockMvc.perform(formLogin().user("ghost@cookie.com").password("Password123!"))
+        mockMvc.perform(formLogin("/login").userParameter("email").user("ghost@cookie.com").password("Password123!"))
             .andExpect(status().is3xxRedirection())
             .andExpect(redirectedUrl("/login?error"));
     }
  
     @Test
     void logoutInvalidatesSession() throws Exception {
-        MvcResult result = mockMvc.perform(formLogin().user(adminEmail).password(rawPassword))
+        MvcResult result = mockMvc.perform(formLogin("/login").userParameter("email").user(adminEmail).password(rawPassword))
             .andReturn();
  
         MockHttpSession session = (MockHttpSession) result.getRequest().getSession(false);
  
         mockMvc.perform(post("/logout").session(session).with(csrf()))
             .andExpect(status().is3xxRedirection())
-            .andExpect(redirectedUrl("/"));
+            .andExpect(redirectedUrl("/?logout"));
 
  
         mockMvc.perform(get("/dashboard").session(session))
