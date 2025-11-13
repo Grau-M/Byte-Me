@@ -6,7 +6,6 @@ import ca.sheridan.byteme.services.CartService;
 import ca.sheridan.byteme.services.OrderService;
 import ca.sheridan.byteme.services.PromotionService;
 import lombok.AllArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
@@ -24,8 +23,6 @@ public class DashboardController {
 
     private final PromotionService promotionService;
     private final OrderService orderService;
-
-    @Autowired
     private final CartService cartService;
 
     @GetMapping("/dashboard")

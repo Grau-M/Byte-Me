@@ -1,12 +1,15 @@
 package ca.sheridan.byteme.services;
 
+import ca.sheridan.byteme.beans.Order;
+import ca.sheridan.byteme.beans.ShippingAddress;
 import ca.sheridan.byteme.models.CartItem;
-import org.springframework.stereotype.Service;
-import org.springframework.web.context.annotation.SessionScope;
 
-import java.io.Serializable;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * A session-scoped service to manage the shopping cart.
@@ -17,6 +20,12 @@ public class CartService {
 
     // A list to hold the items in the cart
     private final List<CartItem> items = new ArrayList<>();
+    private final OrderService orderService;
+
+    @Autowired
+    public CartService(OrderService orderService) {
+        this.orderService = orderService;
+    }
 
     /**
      * Adds an item to the cart.
@@ -87,4 +96,43 @@ public class CartService {
     public int getCartCount() {
         return items.size();
     }
+
+    public Optional<CartItem> getItemById(String itemId) {
+        return items.stream()
+                .filter(item -> item.id().equals(itemId))
+                .findFirst();
+    }
+
+    public boolean updateOrderShipping(Long orderId, String shippingName, String shippingAddressLine1,
+                                   String shippingAddressLine2, String shippingCity, String shippingProvince,
+                                   String shippingPostalCode, String shippingCountry) {
+        if (orderId == null) return false;
+
+        // Get the order
+        Optional<Order> orderOpt = orderService.getOrderByIdOptional(orderId.toString());
+        if (orderOpt.isEmpty()) {
+            return false; // order not found
+        }
+
+        Order order = orderOpt.get();
+
+        // Update shipping information
+        ShippingAddress shipping = new ShippingAddress(
+            shippingName,
+            shippingAddressLine1,
+            shippingAddressLine2,
+            shippingCity,
+            shippingProvince,
+            shippingPostalCode,
+            shippingCountry
+        );
+
+        // Assign it to the order
+        order.setShippingAddress(shipping);
+
+        // Persist the changes
+        orderService.updateOrder(order);
+
+        return true;
+        }
 }

@@ -1,13 +1,13 @@
 package ca.sheridan.byteme;
 
 import ca.sheridan.byteme.beans.Order;
-import ca.sheridan.byteme.beans.ShippingAddress; // <-- IMPORT
+import ca.sheridan.byteme.beans.ShippingAddress;
 import ca.sheridan.byteme.controllers.CheckoutController;
 import ca.sheridan.byteme.models.ChargeRequest;
 import ca.sheridan.byteme.services.CartService;
 import ca.sheridan.byteme.services.OrderService;
-import ca.sheridan.byteme.services.ShippingService; // <-- IMPORT
 import ca.sheridan.byteme.services.StripeService;
+import ca.sheridan.byteme.services.DeliveryDateService; // <-- IMPORTANT: delivery date service
 import com.stripe.model.Charge;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -15,12 +15,14 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.ui.Model;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import java.util.ArrayList; // <-- IMPORT
+import java.time.LocalDate;
+import java.util.ArrayList;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify; // <-- IMPORT
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -34,12 +36,15 @@ public class GuestCheckoutTest {
 
     @Mock
     private OrderService orderService;
-    
+
     @Mock
-    private ShippingService shippingService; // <-- ADD MOCK FOR NEW SERVICE
+    private DeliveryDateService deliveryDateService; // <-- ADD THIS MOCK
 
     @Mock
     private Model model;
+
+    @Mock
+    private RedirectAttributes redirectAttributes;
 
     @InjectMocks
     private CheckoutController checkoutController;
@@ -48,36 +53,39 @@ public class GuestCheckoutTest {
     public void testGuestCheckout() throws Exception {
         // Arrange
         ChargeRequest chargeRequest = new ChargeRequest();
-        String stripeToken = "tok_visa";
+        String stripeToken = "tok_test_123";
         String guestEmail = "guest@example.com";
-        double shippingCost = 12.99;
-        
+        double shippingCost = 5.99;
+        LocalDate deliveryDate = LocalDate.now().plusDays(2);
+
+        // Mock delivery date availability
+        when(deliveryDateService.isDateAvailable(deliveryDate)).thenReturn(true);
+
         // Mock shipping address details
-        String shippingName = "Guest User";
+        String shippingName = "John Doe";
         String shippingAddressLine1 = "123 Main St";
-        String shippingAddressLine2 = "";
+        String shippingAddressLine2 = "Apt 4B";
         String shippingCity = "Toronto";
         String shippingProvince = "ON";
-        String shippingPostalCode = "M5V 2K7";
+        String shippingPostalCode = "M1M1M1";
         String shippingCountry = "Canada";
-
-        Charge charge = new Charge();
-        charge.setStatus("succeeded");
-        charge.setAmount(11299L); // (subtotal + tax + shipping) * 100
-        charge.setId("ch_123");
 
         // --- Mock CartService calls ---
         double subtotal = 80.00;
         double tax = 10.40;
         double total = subtotal + tax; // 90.40
-        
+
         when(cartService.getSubtotal()).thenReturn(subtotal);
         when(cartService.getTax()).thenReturn(tax);
-        when(cartService.getTotal()).thenReturn(total); // Total before shipping
-        when(cartService.getCartItems()).thenReturn(new ArrayList<>()); // Empty list for simplicity
-        
+        when(cartService.getTotal()).thenReturn(total);
+        when(cartService.getCartItems()).thenReturn(new ArrayList<>());
+
         // --- Mock StripeService call ---
-        // Signature is now (ChargeRequest, String customerEmail, ShippingAddress)
+        Charge charge = new Charge();
+        charge.setStatus("succeeded");
+        charge.setAmount((long) ((total + shippingCost) * 100));
+        charge.setId("ch_123");
+
         when(stripeService.charge(any(ChargeRequest.class), any(String.class), any(ShippingAddress.class)))
                 .thenReturn(charge);
 
@@ -97,16 +105,15 @@ public class GuestCheckoutTest {
                 shippingPostalCode,
                 shippingCountry,
                 shippingCost,
-                model
+                deliveryDate,
+                model,
+                redirectAttributes
         );
 
         // Assert
         assertEquals("result", result);
-        
-        // Verify that the cart was cleared for the guest
         verify(cartService).clearCart();
-        
-        // Verify the order was saved
         verify(orderService).createOrder(any(Order.class));
+        verify(deliveryDateService).addOrderToDate(deliveryDate);
     }
 }

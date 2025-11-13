@@ -5,6 +5,7 @@ import ca.sheridan.byteme.beans.ShippingAddress;
 import ca.sheridan.byteme.beans.User;
 import ca.sheridan.byteme.models.ChargeRequest;
 import ca.sheridan.byteme.services.CartService;
+import ca.sheridan.byteme.services.DeliveryDateService;
 import ca.sheridan.byteme.services.OrderService;
 import ca.sheridan.byteme.services.ShippingService; // <-- IMPORT
 import ca.sheridan.byteme.services.StripeService;
@@ -18,7 +19,10 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*; // <-- IMPORT
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import org.springframework.format.annotation.DateTimeFormat;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Map; // <-- IMPORT
 import java.util.Optional; // <-- IMPORT
@@ -29,37 +33,81 @@ public class CheckoutController {
     @Value("${STRIPE_PUBLIC_KEY}")
     private String stripePublicKey;
 
+    private final StripeService stripeService;
+    private final CartService cartService;
+    private final OrderService orderService;
+    private final ShippingService shippingService;
+    private final DeliveryDateService deliveryDateService;
+
     @Autowired
-    private StripeService stripeService;
-    @Autowired
-    private CartService cartService;
-    @Autowired
-    private OrderService orderService;
-    @Autowired
-    private ShippingService shippingService; // <-- INJECT
+    public CheckoutController(StripeService stripeService, CartService cartService, OrderService orderService, ShippingService shippingService, DeliveryDateService deliveryDateService) {
+        this.stripeService = stripeService;
+        this.cartService = cartService;
+        this.orderService = orderService;
+        this.shippingService = shippingService;
+        this.deliveryDateService = deliveryDateService;
+    }
 
     @GetMapping("/checkout")
-    public String checkout(Model model) {
-        model.addAttribute("stripePublicKey", stripePublicKey);
-        model.addAttribute("subtotal", cartService.getSubtotal());
-        model.addAttribute("tax", cartService.getTax());
-        model.addAttribute("shippingCost", 0.00);
-        model.addAttribute("total", cartService.getTotal());
-        model.addAttribute("amount", (int) (cartService.getTotal() * 100));
-        model.addAttribute("cartItems", cartService.getCartItems());
+    public String checkout(@RequestParam(name = "editOrderId", required = false) String editOrderId, Model model) {
 
-        // --- New Logic to Get Default Name ---
-        String defaultName = ""; // Start with empty
+        model.addAttribute("stripePublicKey", stripePublicKey);
+        model.addAttribute("availableDates", deliveryDateService.getAvailableDates());
+
+        // Default name from logged-in user
+        String defaultName = "";
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        User user = null;
         if (authentication != null && authentication.getPrincipal() instanceof User) {
-            User user = (User) authentication.getPrincipal();
-            defaultName = user.getName(); // Get the user's name
+            user = (User) authentication.getPrincipal();
+            defaultName = user.getName();
         }
-        model.addAttribute("defaultName", defaultName); // Add it to the model
-        // --- End of New Logic ---
+        model.addAttribute("defaultName", defaultName);
+
+        if (editOrderId != null) {
+            // --- EDITING AN EXISTING ORDER ---
+            Optional<Order> existingOrderOpt = Optional.of(orderService.getOrderById(editOrderId));
+            if (existingOrderOpt.isPresent()) {
+                Order existingOrder = existingOrderOpt.get();
+                double subtotal = orderService.calculateSubtotal(existingOrder);
+                double tax = orderService.calculateTax(existingOrder);
+                double total = subtotal + tax; // Initial total without shipping
+
+                existingOrder.setSubtotal(subtotal);
+                existingOrder.setTax(tax);
+                existingOrder.setTotal(total);
+
+                model.addAttribute("order", existingOrder);
+                model.addAttribute("cartItems", existingOrder.getItems());
+                model.addAttribute("subtotal", subtotal);
+                model.addAttribute("tax", tax);
+                model.addAttribute("shippingCost", existingOrder.getShippingCost());
+                model.addAttribute("total", total);
+                model.addAttribute("amount", (int) (total * 100));
+
+                if (existingOrder.getShippingAddress() != null) {
+                    model.addAttribute("shippingAddress", existingOrder.getShippingAddress());
+                } else {
+                    model.addAttribute("shippingAddress", new ShippingAddress());
+                }
+            } else {
+                // Handle case where order ID is invalid
+                return "redirect:/cart";
+            }
+        } else {
+            // --- NEW CHECKOUT FROM CART ---
+            model.addAttribute("cartItems", cartService.getCartItems());
+            model.addAttribute("subtotal", cartService.getSubtotal());
+            model.addAttribute("tax", cartService.getTax());
+            model.addAttribute("shippingCost", 0.00);
+            model.addAttribute("total", cartService.getTotal());
+            model.addAttribute("amount", (int) (cartService.getTotal() * 100));
+            model.addAttribute("shippingAddress", new ShippingAddress());
+        }
 
         return "checkout";
     }
+
 
     /**
      * NEW API ENDPOINT
@@ -94,8 +142,14 @@ public class CheckoutController {
                          @RequestParam(name = "shippingPostalCode") String shippingPostalCode,
                          @RequestParam(name = "shippingCountry") String shippingCountry,
                          @RequestParam(name = "shippingCost") double shippingCost,
-                         Model model) throws StripeException {
+                         @RequestParam(name = "deliveryDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate deliveryDate,
+                         Model model, RedirectAttributes redirectAttributes) throws StripeException {
         
+        if (!deliveryDateService.isDateAvailable(deliveryDate)) {
+            redirectAttributes.addFlashAttribute("error", "The selected delivery date is no longer available.");
+            return "redirect:/checkout";
+        }
+
         chargeRequest.setDescription("Cookiegram Order");
         chargeRequest.setCurrency(ChargeRequest.Currency.CAD);
         chargeRequest.setStripeToken(stripeToken); // Set the token from the form
@@ -139,11 +193,13 @@ public class CheckoutController {
                 .shippingCost(shippingCost) // <-- SAVE SHIPPING
                 .total(total)               // <-- SAVE NEW TOTAL
                 .orderDate(LocalDateTime.now())
+                .deliveryDate(deliveryDate)
                 .chargeId(charge.getId())
                 .shippingAddress(shippingAddress) // <-- SAVE ADDRESS
                 .build();
 
         orderService.createOrder(order);
+        deliveryDateService.addOrderToDate(deliveryDate);
         cartService.clearCart();
 
         model.addAttribute("status", charge.getStatus());
@@ -160,4 +216,86 @@ public class CheckoutController {
         model.addAttribute("error", ex.getMessage());
         return "result";
     }
+
+    @GetMapping("/checkout/edit/{orderId}")
+    public String editOrder(@PathVariable String orderId, Model model) {
+        Optional<Order> orderOpt = Optional.of(orderService.getOrderById(orderId));
+        if (orderOpt.isEmpty()) {
+            return "redirect:/"; // or some error page
+        }
+
+        Order order = orderOpt.get();
+        model.addAttribute("order", order);
+        model.addAttribute("availableDates", deliveryDateService.getAvailableDates());
+
+        // Pre-fill shipping info
+        model.addAttribute("shippingName", order.getShippingAddress().getName());
+        model.addAttribute("shippingAddressLine1", order.getShippingAddress().getAddressLine1());
+        model.addAttribute("shippingAddressLine2", order.getShippingAddress().getAddressLine2());
+        model.addAttribute("shippingCity", order.getShippingAddress().getCity());
+        model.addAttribute("shippingProvince", order.getShippingAddress().getProvince());
+        model.addAttribute("shippingPostalCode", order.getShippingAddress().getPostalCode());
+        model.addAttribute("shippingCountry", order.getShippingAddress().getCountry());
+        model.addAttribute("shippingCost", order.getShippingCost());
+
+        model.addAttribute("cartItems", order.getItems());
+        model.addAttribute("subtotal", order.getSubtotal());
+        model.addAttribute("tax", order.getTax());
+        model.addAttribute("total", order.getTotal());
+
+        return "checkout"; // reuse the same template
+    }
+    @PostMapping("/checkout/edit/{orderId}")
+    public String saveEditedOrder(@PathVariable String orderId,
+                                @RequestParam String shippingName,
+                                @RequestParam String shippingAddressLine1,
+                                @RequestParam(required = false) String shippingAddressLine2,
+                                @RequestParam String shippingCity,
+                                @RequestParam String shippingProvince,
+                                @RequestParam String shippingPostalCode,
+                                @RequestParam String shippingCountry,
+                                @RequestParam(name = "deliveryDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate deliveryDate,
+                                RedirectAttributes redirectAttributes) {
+
+        Optional<Order> orderOpt = Optional.of(orderService.getOrderById(orderId));
+        if (orderOpt.isEmpty()) {
+            redirectAttributes.addFlashAttribute("error", "Order not found.");
+            return "redirect:/"; // or error page
+        }
+
+        Order order = orderOpt.get();
+
+        if (!deliveryDateService.isDateAvailable(deliveryDate)) {
+            redirectAttributes.addFlashAttribute("error", "The selected delivery date is no longer available.");
+            return "redirect:/checkout?editOrderId=" + orderId;
+        }
+
+        ShippingAddress updatedAddress = ShippingAddress.builder()
+                .name(shippingName)
+                .addressLine1(shippingAddressLine1)
+                .addressLine2(shippingAddressLine2)
+                .city(shippingCity)
+                .province(shippingProvince)
+                .postalCode(shippingPostalCode)
+                .country(shippingCountry)
+                .build();
+
+        order.setShippingAddress(updatedAddress);
+        order.setDeliveryDate(deliveryDate);
+
+        // Recalculate shipping cost
+        Optional<Double> shippingCostOpt = shippingService.getShippingCost(updatedAddress);
+        order.setShippingCost(shippingCostOpt.orElse(order.getShippingCost()));
+
+        // Update total
+        order.setTotal(order.getSubtotal() + order.getTax() + order.getShippingCost());
+
+        orderService.updateOrder(order);
+        deliveryDateService.addOrderToDate(deliveryDate);
+
+        redirectAttributes.addFlashAttribute("cartMessage", "Shipping details saved successfully!");
+        // Redirect back to cart in edit mode
+        return "redirect:/order/edit/" + order.getId();
+        }
+
 }

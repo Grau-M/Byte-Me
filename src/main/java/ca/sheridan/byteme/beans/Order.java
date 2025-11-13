@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -27,6 +28,14 @@ public class Order {
     private double shippingCost;
     private double total;
     private LocalDateTime orderDate;
+    private LocalDate deliveryDate;
     private String chargeId;
     private ShippingAddress shippingAddress;
+    private String carrier;         // e.g., "UPS", "FedEx", "USPS"
+    private String trackingNumber;
+
+    @Builder.Default
+    private Status status = Status.Pending;
+
+
 }

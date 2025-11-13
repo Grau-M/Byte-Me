@@ -4,7 +4,6 @@ package ca.sheridan.byteme.controllers;
 // import ca.sheridan.byteme.models.AuthenticationRequest;
 // import ca.sheridan.byteme.models.AuthenticationResponse;
 
-import ca.sheridan.byteme.services.AuthenticationService;
 import ca.sheridan.byteme.services.CartService;
 // No longer need these imports for the deleted method
 // import jakarta.servlet.http.Cookie;
@@ -22,10 +21,6 @@ public class HomeController {
 
     @Autowired
     private CartService cartService;
-
-    // This service might still be used elsewhere, so it's fine to keep.
-    @Autowired
-    private AuthenticationService authenticationService;
 
     @GetMapping("/")
     public String index(Model model) {

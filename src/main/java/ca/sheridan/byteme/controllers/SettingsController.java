@@ -28,10 +28,9 @@ public class SettingsController {
 
     private final UserService userService;
     private final PasswordEncoder passwordEncoder;
-    
-    @Autowired
     private final CartService cartService;
 
+    @Autowired
     public SettingsController(UserService userService, PasswordEncoder passwordEncoder, CartService cartService) {
         this.userService = userService;
         this.passwordEncoder = passwordEncoder;

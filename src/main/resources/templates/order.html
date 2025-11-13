@@ -105,12 +105,11 @@
 
             <form th:action="@{/add-to-cart}" method="POST" id="orderForm">
                 
-                <input type="hidden" name="buyNow" value="true" 
-                       th:if="${not #authorization.expression('isAuthenticated()')}">
-                
                 <input type="hidden" name="productId" value="COOKIE_LARGE_CC">
                 <input type="hidden" name="productName" value="Large Cookiegram">
                 <input type="hidden" name="price" value="34.99">
+                <input type="hidden" name="itemId" th:if="${editingItem}" th:value="${editingItem.id}">
+                <input type="hidden" name="orderId" th:if="${orderId}" th:value="${orderId}">
 
                 <div class="mb-3">
                   <label for="cookieMessage" class="form-label fw-bold">Your Custom Message</label>
@@ -135,19 +134,30 @@
                           style="color: inherit;">
                     
                     <option value="" selected disabled>Choose a color...</option>
-                    <option value="white" style="color: inherit;" th:selected="${lastColor == 'white'}">Classic White</option>
-                    <option value="pink" style="color: hotpink;" th:selected="${lastColor == 'pink'}">Pretty Pink</option>
-                    <option value="red" style="color: red;" th:selected="${lastColor == 'red'}">Vibrant Red</option>
-                    <option value="blue" style="color: blue;" th:selected="${lastColor == 'blue'}">Cool Blue</option>
-                    <option value="green" style="color: green;" th:selected="${lastColor == 'green'}">Festive Green</option>
+                    <option value="white" style="color: inherit;" th:selected="${lastColor == 'classicwhite'}">Classic White</option>
+                    <option value="pink" style="color: hotpink;" th:selected="${lastColor == 'prettypink'}">Pretty Pink</option>
+                    <option value="red" style="color: red;" th:selected="${lastColor == 'vibrantred'}">Vibrant Red</option>
+                    <option value="blue" style:color="blue;" th:selected="${lastColor == 'coolblue'}">Cool Blue</option>
+                    <option value="green" style="color: green;" th:selected="${lastColor == 'festivegreen'}">Festive Green</option>
                     <option value="chocolate" style="color: inherit;" th:selected="${lastColor == 'chocolate'}">Chocolate</option>
                   </select>
                 </div>
 
-                <button type="submit" class="btn btn-primary btn-lg w-100 shadow">
-                  <i class="bi bi-cart-plus me-2"></i>
-                  Add to Cart
-                </button>
+                <div class="d-grid gap-2">
+                  <button type="submit" class="btn btn-primary btn-lg w-100 shadow">
+                    <i class="bi bi-cart-plus me-2"></i>
+                    <span th:if="${editingItem}">Update Item</span>
+                    <span th:unless="${editingItem}">Add to Cart</span>
+                  </button>
+                  <a th:if="${orderId == null}" th:href="@{/cart}" class="btn btn-secondary btn-lg w-100">
+                    <i class="bi bi-cart me-2"></i>
+                    Proceed to Cart
+                  </a>
+                  <a th:if="${orderId != null}" th:href="@{|/order/edit/${orderId}|}" class="btn btn-secondary btn-lg w-100">
+                    <i class="bi bi-arrow-left me-2"></i>
+                    Back to Order
+                  </a>
+                </div>
             </form>
           </div>
         </div>

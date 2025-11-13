@@ -1,7 +1,7 @@
 package ca.sheridan.byteme.controllers;
 
-import ca.sheridan.byteme.models.CartItem; // Assuming models package
-import ca.sheridan.byteme.services.CartService; // Assuming services package
+import ca.sheridan.byteme.models.CartItem;
+import ca.sheridan.byteme.services.CartService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -19,7 +19,6 @@ public class CartController {
 
     private final CartService cartService;
 
-    // Autowire the same session-scoped CartService
     @Autowired
     public CartController(CartService cartService) {
         this.cartService = cartService;
@@ -27,40 +26,29 @@ public class CartController {
 
     @GetMapping
     public String showCartPage(Model model) {
-        
-        // --- NO MORE MOCK DATA ---
-        // We get the real items from the session-scoped service
         List<CartItem> items = cartService.getCartItems();
         double subtotal = cartService.getSubtotal();
         double tax = cartService.getTax();
         double total = cartService.getTotal();
         int cartCount = cartService.getCartCount();
 
-        // Add real data to the model for Thymeleaf to use
         model.addAttribute("cartItems", items);
         model.addAttribute("subtotal", subtotal);
         model.addAttribute("tax", tax);
         model.addAttribute("total", total);
-        model.addAttribute("cartCount", cartCount); // For the navbar bubble
+        model.addAttribute("cartCount", cartCount);
 
-        // This tells Spring to render the "cart.html" template
-        // This is what is failing, because the file is in the wrong spot
         return "cart";
     }
 
-    /**
-     * Handles removing an item from the cart.
-     */
     @PostMapping("/remove")
     public String removeFromCart(@RequestParam String itemId,
                                  RedirectAttributes redirectAttributes) {
                                      
         cartService.removeItem(itemId);
         
-        // Add a success message for the cart page
         redirectAttributes.addFlashAttribute("cartMessage", "Item removed from cart.");
         
-        // Redirect back to the cart page
         return "redirect:/cart";
     }
 }

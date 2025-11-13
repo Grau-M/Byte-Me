@@ -87,7 +87,6 @@
     </nav>
 
     <main class="container-fluid pt-3">
-
         <div th:if="${#authorization.expression('hasAuthority(''CUSTOMER'')')}">
             <div class="card mb-4">
                 <div class="card-header">
@@ -96,68 +95,124 @@
                 <div class="card-body">
                     <h5 class="card-title">Your Orders</h5>
                     <p class="card-text">Here you can view the status of your recent orders.</p>
-                    <div th:if="${orders.isEmpty()}">
-                        <p>You have no orders.</p>
+
+                    <!-- No orders message -->
+                    <div th:if="${orders.isEmpty()}" class="alert alert-info text-center">
+                        <i class="bi bi-info-circle me-2"></i> You have no orders.
                     </div>
-                    <div th:unless="${orders.isEmpty()}" class="accordion" id="ordersAccordion">
-                        <div th:each="order, iter : ${orders}" class="accordion-item">
-                            <h2 class="accordion-header" th:id="'heading' + ${iter.index}">
-                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                                    th:data-bs-target="'#collapse' + ${iter.index}" aria-expanded="false"
-                                    th:aria-controls="'collapse' + ${iter.index}">
-                                    Order #<span th:text="${order.id}"></span> - <span
-                                        th:text="${#temporals.format(order.orderDate, 'MMM dd, yyyy')}"></span>
-                                </button>
-                            </h2>
-                            <div th:id="'collapse' + ${iter.index}" class="accordion-collapse collapse"
-                                th:aria-labelledby="'heading' + ${iter.index}" data-bs-parent="#ordersAccordion">
-                                <div class="accordion-body">
-                                    <ul class="list-group">
-                                        <li th:each="item : ${order.items}" class="list-group-item">
-                                            <span th:text="${item.name}"></span> - 
-                                            <span th:text="${item.message}"></span> - 
-                                            <span th:text="${item.icingColorName}"></span> - 
-                                            <span th:text="|${'$'}${item.price}|"></span>
-                                        </li>
-                                    </ul>
-                                    <p class="mt-3">Subtotal: <span
-                                            th:text="|${'$'}${#numbers.formatDecimal(order.subtotal, 1, 2)}|"></span></p>
-                                    <p>Tax: <span
-                                            th:text="|${'$'}${#numbers.formatDecimal(order.tax, 1, 2)}|"></span></p>
-                                    <p>Total: <span
-                                            th:text="|${'$'}${#numbers.formatDecimal(order.total, 1, 2)}|"></span></p>
+
+                    <!-- Orders displayed as cards -->
+                    <div th:unless="${orders.isEmpty()}" class="row row-cols-1 row-cols-md-2 g-4 justify-content-center">
+                        <div th:each="order : ${orders}" class="col">
+                            <div class="card h-100 border-0 shadow-sm rounded-4 bg-white">
+                                <div class="card-body p-4">
+                                    <!-- Header -->
+                                    <div class="d-flex justify-content-between align-items-start mb-3">
+                                        <div>
+                                            <h5 class="fw-bold mb-1">Order #<span th:text="${order.id}"></span></h5>
+                                            <small class="text-muted" th:text="${#temporals.format(order.orderDate, 'MMMM dd, yyyy')}"></small>
+                                        </div>
+                                        <span class="badge fs-6"
+                                            th:classappend="${order.status.name() == 'Pending' ? 'bg-warning text-dark' :
+                                                            order.status.name() == 'Confirmed' ? 'bg-info text-dark' :
+                                                            order.status.name() == 'Baking' ? 'bg-primary text-light' :
+                                                            order.status.name() == 'Ready for Shipment' ? 'bg-secondary text-light' :
+                                                            order.status.name() == 'Shipped' ? 'bg-success text-light':
+                                                            order.status.name() == 'Canceled' ? 'bg-danger text-light' 
+                                                            :'bg-dark text-light'}"
+                                            th:text="${order.status.name()}"></span>
+                                    </div>
+
+                                    <hr>
+
+                                    <div class="row g-4">
+                                        <!-- Left Column: Items and Summary -->
+                                        <div class="col-md-6">
+                                            <h6 class="fw-bold mb-2"><i class="bi bi-box-seam me-2"></i>Items</h6>
+                                            <ul class="list-group list-group-flush mb-3 small">
+                                                <li th:each="item : ${order.items}" class="list-group-item px-0 py-1">
+                                                    <div class="d-flex justify-content-between">
+                                                        <div>
+                                                            <strong th:text="${item.name}"></strong>
+                                                            <p class="text-muted mb-0" style="font-size: 0.9em;" th:text="${item.message}"></p>
+                                                        </div>
+                                                        <span class="fw-semibold text-success" th:text="|${'$'}${#numbers.formatDecimal(item.price, 1, 2)}|"></span>
+                                                    </div>
+                                                </li>
+                                            </ul>
+
+                                            <h6 class="fw-bold mt-3 mb-2"><i class="bi bi-receipt me-2"></i>Summary</h6>
+                                            <ul class="list-unstyled small text-muted">
+                                                <li class="d-flex justify-content-between"><span>Subtotal:</span> <span class="fw-semibold" th:text="|${'$'}${#numbers.formatDecimal(order.subtotal, 1, 2)}|"></span></li>
+                                                <li class="d-flex justify-content-between"><span>Tax:</span> <span class="fw-semibold" th:text="|${'$'}${#numbers.formatDecimal(order.tax, 1, 2)}|"></span></li>
+                                                <li class="d-flex justify-content-between"><span>Shipping:</span> <span class="fw-semibold" th:text="|${'$'}${#numbers.formatDecimal(order.shippingCost, 1, 2)}|"></span></li>
+                                                <li class="d-flex justify-content-between fw-bold mt-2 border-top pt-2 text-dark"><span>Total:</span> <span class="text-primary" th:text="|${'$'}${#numbers.formatDecimal(order.total, 1, 2)}|"></span></li>
+                                            </ul>
+                                        </div>
+
+                                        <!-- Right Column: Shipping and Delivery -->
+                                        <div class="col-md-6">
+                                            <h6 class="fw-bold mb-2"><i class="bi bi-truck me-2"></i>Shipping Address</h6>
+                                            <div th:if="${order.shippingAddress}" class="small text-muted">
+                                                <p class="mb-0" th:text="${order.shippingAddress.name}"></p>
+                                                <p class="mb-0" th:text="${order.shippingAddress.addressLine1}"></p>
+                                                <p class="mb-0" th:if="${order.shippingAddress.addressLine2}" th:text="${order.shippingAddress.addressLine2}"></p>
+                                                <p class="mb-0" th:text="${order.shippingAddress.city + ', ' + order.shippingAddress.province + ' ' + order.shippingAddress.postalCode}"></p>
+                                            </div>
+
+                                            <h6 class="fw-bold mt-3 mb-2"><i class="bi bi-calendar-event me-2"></i>Delivery Date</h6>
+                                            <div th:if="${order.deliveryDate}" class="small text-muted">
+                                                <p class="mb-0" th:text="${#temporals.format(order.deliveryDate, 'MMMM dd, yyyy')}"></p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Actions -->
+                                    <div class="mt-4 d-flex justify-content-end gap-2">
+                                        <a th:href="@{/order/edit/{id}(id=${order.id})}" class="btn btn-outline-primary btn-sm">
+                                            <i class="bi bi-pencil-square me-1"></i> Edit
+                                        </a>
+                                        <a th:if="${order.trackingNumber}" th:href="'https://www.ups.com/track?tracknum=' + ${order.trackingNumber}" target="_blank" class="btn btn-outline-secondary btn-sm">
+                                            <i class="bi bi-truck me-1"></i> Track
+                                        </a>
+                                        <form th:action="@{/order/cancel/{id}(id=${order.id})}" method="post" class="d-inline">
+                                            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                                            <button type="submit" class="btn btn-outline-danger btn-sm" th:disabled="${order.status.name() != 'Pending'}">
+                                                <i class="bi bi-x-circle me-1"></i> Cancel
+                                            </button>
+                                        </form>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
+
+
+                    <!-- Create new order -->
                     <a href="/order" class="btn btn-primary mt-3">Create Order</a>
 
+                    <!-- Promotions section -->
                     <div class="mt-4">
                         <h5 class="mb-3 d-flex align-items-center">
                             <i class="bi bi-megaphone-fill me-2"></i> Current Promotions
                         </h5>
 
-                        <div class="alert alert-secondary"
-                            th:if="${promotions == null or #lists.isEmpty(promotions)}">
+                        <div class="alert alert-secondary" th:if="${promotions == null or #lists.isEmpty(promotions)}">
                             No active promotions today. Check back soon!
                         </div>
 
                         <div class="row g-3" th:if="${promotions != null and !#lists.isEmpty(promotions)}">
                             <div class="col-md-6 col-lg-4" th:each="p : ${promotions}">
                                 <div class="card h-100 shadow-sm">
-                                    <img th:if="${p.imageUrl}" th:src="${p.imageUrl}" class="card-img-top"
-                                        alt="Promotion image" />
+                                    <img th:if="${p.imageUrl}" th:src="${p.imageUrl}" class="card-img-top" alt="Promotion image" />
                                     <div class="card-body">
                                         <div class="d-flex justify-content-between align-items-start mb-2">
                                             <h6 class="card-subtitle text-muted"
-                                                th:text="'Valid until ' + ${#temporals.format(p.endsAt, 'MMM d, yyyy')}">
-                                                Valid dates</h6>
-                                            <span class="badge bg-warning text-dark" th:if="${p.badge}"
-                                                th:text="${p.badge}">NEW</span>
+                                                th:text="'Valid until ' + ${#temporals.format(p.endsAt, 'MMM d, yyyy')}"></h6>
+                                            <span class="badge bg-warning text-dark" th:if="${p.badge}" th:text="${p.badge}">NEW</span>
                                         </div>
                                         <h5 class="card-title mb-1" th:text="${p.title}">Promo Title</h5>
                                         <p class="card-text text-muted" th:text="${p.blurb}">Promo blurb</p>
-
                                         <div th:if="${p.promoCode}" class="mt-2">
                                             <span class="small text-muted">Use code:</span>
                                             <code th:text="${p.promoCode}">CODE123</code>
@@ -166,10 +221,12 @@
                                 </div>
                             </div>
                         </div>
-                        </div>
                     </div>
+
                 </div>
             </div>
+        </div>
+
         <div th:if="${#authorization.expression('hasAuthority(''STAFF'')') or #authorization.expression('hasAuthority(''ADMIN'')')}">
             <div class="card">
                 <div class="card-header">
