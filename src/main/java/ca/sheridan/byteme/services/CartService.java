@@ -6,6 +6,9 @@ import ca.sheridan.byteme.models.CartItem;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.web.context.WebApplicationContext;
+import org.springframework.context.annotation.Scope;
+import org.springframework.context.annotation.ScopedProxyMode;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -16,15 +19,18 @@ import java.util.Optional;
  * Each user gets their own instance of this bean for their session.
  */
 @Service
+@Scope(value = WebApplicationContext.SCOPE_SESSION, proxyMode = ScopedProxyMode.TARGET_CLASS)
 public class CartService {
 
     // A list to hold the items in the cart
     private final List<CartItem> items = new ArrayList<>();
     private final OrderService orderService;
+    private final ShippingService shippingService;
 
     @Autowired
-    public CartService(OrderService orderService) {
+    public CartService(OrderService orderService, ShippingService shippingService) {
         this.orderService = orderService;
+        this.shippingService = shippingService;
     }
 
     /**
@@ -74,11 +80,27 @@ public class CartService {
     }
 
     /**
-     * Calculates the total of the cart.
+     * Calculates the total of the cart, optionally including shipping.
+     * @param shippingAddress The shipping address to calculate shipping costs for. Can be null.
+     * @return The total as a double.
+     */
+    public double getTotal(ShippingAddress shippingAddress) {
+        double subtotal = getSubtotal();
+        double tax = getTax();
+        double shippingCost = 0.0;
+
+        if (shippingAddress != null) {
+            shippingCost = shippingService.getShippingCost(shippingAddress).orElse(0.0);
+        }
+        return subtotal + tax + shippingCost;
+    }
+
+    /**
+     * Calculates the total of the cart (subtotal + tax), without shipping.
      * @return The total as a double.
      */
     public double getTotal() {
-        return getSubtotal() + getTax();
+        return getTotal(null);
     }
 
     /**

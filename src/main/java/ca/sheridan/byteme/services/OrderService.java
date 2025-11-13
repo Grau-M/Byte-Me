@@ -15,6 +15,8 @@ public class OrderService {
 
     @Autowired
     private OrderRepository orderRepository;
+    @Autowired
+    private ShippingService shippingService;
 
     private static final double TAX_RATE = 0.13; // Example: 13% HST
 
@@ -76,7 +78,14 @@ public class OrderService {
     }
 
     public double calculateTotal(Order order) {
-        return calculateSubtotal(order) + calculateTax(order);
+        double subtotal = calculateSubtotal(order);
+        double tax = calculateTax(order);
+        double shippingCost = 0.0;
+
+        if (order.getShippingAddress() != null) {
+            shippingCost = shippingService.getShippingCost(order.getShippingAddress()).orElse(0.0);
+        }
+        return subtotal + tax + shippingCost;
     }
 
     public Optional<Order> getOrderByIdOptional(String editOrderId) {
