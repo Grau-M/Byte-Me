@@ -1,0 +1,7 @@
+<!DOCTYPE html>
+<!-- Footer fragment used across pages -->
+<div xmlns:th="http://www.thymeleaf.org" th:fragment="mainFooter">
+  <footer class="py-4 text-center text-muted small footer-sticky" id="main-footer">
+    © <span th:text="${#dates.format(#dates.createNow(), 'yyyy')}">2025</span> Cookiegram Bakery · Family-owned in Oakville
+  </footer>
+</div>

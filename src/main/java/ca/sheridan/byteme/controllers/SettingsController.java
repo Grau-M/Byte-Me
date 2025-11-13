@@ -2,7 +2,9 @@ package ca.sheridan.byteme.controllers;
 
 import ca.sheridan.byteme.beans.User;
 import ca.sheridan.byteme.models.UpdateProfileRequest;
+import ca.sheridan.byteme.services.CartService;
 import ca.sheridan.byteme.services.UserService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -26,14 +28,20 @@ public class SettingsController {
 
     private final UserService userService;
     private final PasswordEncoder passwordEncoder;
+    private final CartService cartService;
 
-    public SettingsController(UserService userService, PasswordEncoder passwordEncoder) {
+    @Autowired
+    public SettingsController(UserService userService, PasswordEncoder passwordEncoder, CartService cartService) {
         this.userService = userService;
         this.passwordEncoder = passwordEncoder;
+        this.cartService = cartService;
     }
 
     @GetMapping("/settings")
     public String getSettingsPage(Model model) {
+        // Add cart count
+        model.addAttribute("cartCount", cartService.getCartCount());
+
         // Add current time for the navbar clock
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("h:mm:ss a");
         model.addAttribute("currentTime", LocalDateTime.now().format(formatter));

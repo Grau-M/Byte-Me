@@ -14,6 +14,31 @@
     }
 })();
 
+// Sticky Footer Logic: Fixed when no scroll, static when scrollable
+(function() {
+    const footer = document.getElementById('main-footer');
+    if (!footer) return;
+
+    function checkFooterPosition() {
+        const hasScroll = document.documentElement.scrollHeight > window.innerHeight;
+        if (hasScroll) {
+            footer.classList.add('has-scroll');
+        } else {
+            footer.classList.remove('has-scroll');
+        }
+    }
+
+    // Check on page load
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', checkFooterPosition);
+    } else {
+        checkFooterPosition();
+    }
+
+    // Recheck on window resize
+    window.addEventListener('resize', checkFooterPosition);
+})();
+
 // Dynamic Clock Script (common to dashboard and settings)
 function updateClock() {
     const clockElement = document.getElementById('local-clock');
