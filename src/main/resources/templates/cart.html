@@ -57,9 +57,16 @@
             <div class="card-body p-5">
               <h1 class="h3 fw-bold">Your Cart is Empty</h1>
               <p class="text-muted">Looks like you haven't added any cookies yet.</p>
-              <a href="/order" class="btn btn-primary btn-lg mt-3">
+              <a th:href="${orderId != null} ? @{/order(orderId=${orderId})} : @{/order}" class="btn btn-primary btn-lg mt-3">
                 <i class="bi bi-cookie me-2"></i> Order a Cookie
               </a>
+              <form th:if="${orderId != null}" th:action="@{/order/save}" method="POST" class="d-inline">
+                <input type="hidden" name="orderId" th:value="${orderId}" />
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                <button type="submit" class="btn btn-secondary btn-lg mt-3">
+                  <i class="bi bi-save me-2"></i> Save Changes
+                </button>
+              </form>
             </div>
           </div>
         </div>

@@ -106,6 +106,13 @@ public class GuestCheckoutTest {
                 shippingCountry,
                 shippingCost,
                 deliveryDate,
+                "Jane Doe", // billingName
+                "456 Billing St", // billingAddressLine1
+                "", // billingAddressLine2
+                "Billing City", // billingCity
+                "ON", // billingProvince
+                "B2B 2B2", // billingPostalCode
+                "Canada", // billingCountry
                 model,
                 redirectAttributes
         );

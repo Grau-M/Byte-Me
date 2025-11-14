@@ -5,6 +5,7 @@ import ca.sheridan.byteme.models.CartItem;
 import ca.sheridan.byteme.services.CartService;
 import ca.sheridan.byteme.services.OrderService;
 import ca.sheridan.byteme.services.ProfanityFilterService;
+import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -30,8 +31,12 @@ public class OrderController {
 
 
     @GetMapping("/order")
-    public String showOrderPage(Model model, @RequestParam(required = false) String itemId, @RequestParam(required = false) String orderId) {
+    public String showOrderPage(Model model, @RequestParam(required = false) String itemId, @RequestParam(required = false) String orderId, HttpSession session) {
         model.addAttribute("cartCount", cartService.getCartCount());
+
+        if (itemId == null && orderId == null) {
+            session.removeAttribute("editOrderId");
+        }
 
         if (itemId != null) {
             if (orderId != null) {
@@ -47,14 +52,16 @@ public class OrderController {
                             model.addAttribute("lastColor", item.icingColorName().toLowerCase().replace(" ", ""));
                         });
                 }
-            } else {
+            }
+            else {
                 cartService.getItemById(itemId).ifPresent(item -> {
                     model.addAttribute("editingItem", item);
                     model.addAttribute("lastMessage", item.message());
                     model.addAttribute("lastColor", item.icingColorName().toLowerCase().replace(" ", ""));
                 });
             }
-        } else {
+        }
+        else {
             if (!model.containsAttribute("lastMessage")) {
                 model.addAttribute("lastMessage", "");
             }
@@ -76,7 +83,13 @@ public class OrderController {
                             @RequestParam(name = "buyNow", required = false, defaultValue = "false") boolean buyNow,
                             @RequestParam(name = "itemId", required = false) String itemId,
                             @RequestParam(name = "orderId", required = false) String orderId,
-                            RedirectAttributes redirectAttributes) {
+                            RedirectAttributes redirectAttributes,
+                            HttpSession session) {
+
+        String editOrderId = (String) session.getAttribute("editOrderId");
+        if (orderId == null && editOrderId != null) {
+            orderId = editOrderId;
+        }
 
         if (profanityFilterService.hasProfanity(cookieMessage)) {
             redirectAttributes.addFlashAttribute("cartError", "Your message contains inappropriate language and was not added to the cart.");
@@ -130,15 +143,16 @@ public class OrderController {
         }
     }
 
-
     @GetMapping("/order/edit/{id}")
-    public String editOrder(@PathVariable("id") String orderId, Model model, RedirectAttributes redirectAttributes) {
+    public String editOrder(@PathVariable("id") String orderId, Model model, RedirectAttributes redirectAttributes, HttpSession session) {
         Order order = orderService.getOrderById(orderId);
 
         if (order == null) {
             redirectAttributes.addFlashAttribute("error", "Order not found");
             return "redirect:/dashboard";
         }
+
+        session.setAttribute("editOrderId", orderId);
 
         List<CartItem> orderItems = order.getItems();
 
@@ -156,7 +170,7 @@ public class OrderController {
 
 
     @PostMapping("/order/save")
-    public String saveOrder(@RequestParam String orderId, RedirectAttributes redirectAttributes) {
+    public String saveOrder(@RequestParam String orderId, RedirectAttributes redirectAttributes, HttpSession session) {
         Order order = orderService.getOrderById(orderId);
 
         if (order == null) {
@@ -170,6 +184,8 @@ public class OrderController {
 
         orderService.updateOrder(order);
 
+        session.removeAttribute("editOrderId");
+
         redirectAttributes.addFlashAttribute("success", "Order #" + orderId + " has been saved successfully!");
         return "redirect:/dashboard";
     }
@@ -177,13 +193,19 @@ public class OrderController {
     @PostMapping("/order/edit/{id}/remove")
     public String removeOrderItem(@PathVariable("id") String orderId,
                                   @RequestParam String itemId,
-                                  RedirectAttributes redirectAttributes) {
+                                  RedirectAttributes redirectAttributes, HttpSession session) {
         Order order = orderService.getOrderById(orderId);
 
         if (order != null) {
             orderService.removeItemFromOrder(order, itemId);
             redirectAttributes.addFlashAttribute("cartMessage", "Item removed from order.");
-        } else {
+
+            if (order.getItems().isEmpty()) {
+                redirectAttributes.addFlashAttribute("orderId", orderId);
+                return "redirect:/cart?orderId=" + orderId;
+            }
+        }
+        else {
             redirectAttributes.addFlashAttribute("error", "Order not found");
         }
 
@@ -192,7 +214,7 @@ public class OrderController {
 
 
     @PostMapping("/order/cancel/{id}")
-    public String cancelOrder(@PathVariable("id") String orderId, RedirectAttributes redirectAttributes) {
+    public String cancelOrder(@PathVariable("id") String orderId, RedirectAttributes redirectAttributes, HttpSession session) {
         Order order = orderService.getOrderById(orderId);
 
         if (order == null) {
@@ -204,7 +226,9 @@ public class OrderController {
 
         if (!canceled) {
             redirectAttributes.addFlashAttribute("error", "Only pending orders can be canceled");
-        } else {
+        }
+        else {
+            session.removeAttribute("editOrderId");
             redirectAttributes.addFlashAttribute("success", "Order canceled successfully");
         }
 
@@ -246,5 +270,7 @@ public class OrderController {
         }
         return details;
     }
-
 }
+
+
+

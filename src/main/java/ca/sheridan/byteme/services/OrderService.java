@@ -60,6 +60,15 @@ public class OrderService {
             return;
         }
         order.getItems().removeIf(item -> item.id().equals(itemId));
+
+        // Recalculate totals
+        order.setSubtotal(calculateSubtotal(order));
+        order.setTax(calculateTax(order));
+        order.setTotal(calculateTotal(order));
+        if (order.getItems().isEmpty()) {
+            order.setShippingCost(0.0);
+        }
+
         updateOrder(order);
     }
 
@@ -82,7 +91,7 @@ public class OrderService {
         double tax = calculateTax(order);
         double shippingCost = 0.0;
 
-        if (order.getShippingAddress() != null) {
+        if (order.getShippingAddress() != null && !order.getItems().isEmpty()) {
             shippingCost = shippingService.getShippingCost(order.getShippingAddress()).orElse(0.0);
         }
         return subtotal + tax + shippingCost;

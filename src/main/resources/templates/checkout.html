@@ -62,71 +62,145 @@
                         <input type="hidden" name="shippingCost" id="shipping-cost-hidden" value="0.0" />
                         <input type="hidden" name="deliveryDate" id="delivery-date-hidden" />
                         
-                        <div th:if="${not #authorization.expression('isAuthenticated()')}">
-                            <h5 class="mb-3">Contact Information</h5>
-                            <div class="mb-3">
-                                <label for="guestEmail" class="form-label">Email</label>
-                                <input type="email" id="guestEmail" name="guestEmail" class="form-control" required>
+                        <div class="accordion" id="checkoutAccordion">
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="headingOne">
+                                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+                                        Shipping Address
+                                    </button>
+                                </h2>
+                                <div id="collapseOne" class="accordion-collapse collapse show" aria-labelledby="headingOne" data-bs-parent="#checkoutAccordion">
+                                    <div class="accordion-body">
+                                        <div th:if="${not #authorization.expression('isAuthenticated()')}">
+                                            <h5 class="mb-3">Contact Information</h5>
+                                            <div class="mb-3">
+                                                <label for="guestEmail" class="form-label">Email</label>
+                                                <input type="email" id="guestEmail" name="guestEmail" class="form-control" required>
+                                            </div>
+                                        </div>
+                
+                                        <div class="mb-3">
+                                            <label for="shippingName" class="form-label">Full Name</label>
+                                            <input type="text" id="shippingName" name="shippingName" class="form-control" th:value="${shippingAddress.name != null} ? ${shippingAddress.name} : ${defaultName}" required>
+                                        </div>
+                                        
+                                        <div class="mb-3">
+                                            <label for="shippingAddressLine1" class="form-label">Address Line 1</label>
+                                            <input type="text" id="shippingAddressLine1" name="shippingAddressLine1" class="form-control" th:value="${shippingAddress.addressLine1}" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="shippingAddressLine2" class="form-label">Address Line 2 (Optional)</label>
+                                            <input type="text" id="shippingAddressLine2" name="shippingAddressLine2" class="form-control" th:value="${shippingAddress.addressLine2}">
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-6 mb-3">
+                                                <label for="shippingCity" class="form-label">City</label>
+                                                <input type="text" id="shippingCity" name="shippingCity" class="form-control" th:value="${shippingAddress.city}" required>
+                                            </div>
+                                            <div class="col-md-6 mb-3">
+                                                <label for="shippingProvince" class="form-label">Province</label>
+                                                <input type="text" id="shippingProvince" name="shippingProvince" class="form-control" th:value="${shippingAddress.province}" placeholder="e.g., ON" required>
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-6 mb-3">
+                                                <label for="shippingPostalCode" class="form-label">Postal Code</label>
+                                                <input type="text" id="shippingPostalCode" name="shippingPostalCode" class="form-control" th:value="${shippingAddress.postalCode}" placeholder="A1B 2C3" required>
+                                            </div>
+                                            <div class="col-md-6 mb-3">
+                                                <label for="shippingCountry" class="form-label">Country</label>
+                                                <input type="text" id="shippingCountry" name="shippingCountry" class="form-control" th:value="${shippingAddress.country != null} ? ${shippingAddress.country} : 'Canada'" required>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="headingTwo">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                                        Billing Address
+                                    </button>
+                                </h2>
+                                <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo" data-bs-parent="#checkoutAccordion">
+                                    <div class="accordion-body">
+                                        <div id="billingAddressForm">
+                                            <div class="mb-3">
+                                                <label for="billingName" class="form-label">Full Name</label>
+                                                <input type="text" id="billingName" name="billingName" class="form-control">
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="billingAddressLine1" class="form-label">Address Line 1</label>
+                                                <input type="text" id="billingAddressLine1" name="billingAddressLine1" class="form-control">
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="billingAddressLine2" class="form-label">Address Line 2 (Optional)</label>
+                                                <input type="text" id="billingAddressLine2" name="billingAddressLine2" class="form-control">
+                                            </div>
+                                            <div class="row">
+                                                <div class="col-md-6 mb-3">
+                                                    <label for="billingCity" class="form-label">City</label>
+                                                    <input type="text" id="billingCity" name="billingCity" class="form-control">
+                                                </div>
+                                                <div class="col-md-6 mb-3">
+                                                    <label for="billingProvince" class="form-label">Province</label>
+                                                    <input type="text" id="billingProvince" name="billingProvince" class="form-control" placeholder="e.g., ON">
+                                                </div>
+                                            </div>
+                                            <div class="row">
+                                                <div class="col-md-6 mb-3">
+                                                    <label for="billingPostalCode" class="form-label">Postal Code</label>
+                                                    <input type="text" id="billingPostalCode" name="billingPostalCode" class="form-control" placeholder="A1B 2C3">
+                                                </div>
+                                                <div class="col-md-6 mb-3">
+                                                    <label for="billingCountry" class="form-label">Country</label>
+                                                    <input type="text" id="billingCountry" name="billingCountry" class="form-control" value="Canada">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="headingThree">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+                                        Delivery Date
+                                    </button>
+                                </h2>
+                                <div id="collapseThree" class="accordion-collapse collapse" aria-labelledby="headingThree" data-bs-parent="#checkoutAccordion">
+                                    <div class="accordion-body">
+                                        <div class="mb-3">
+                                            <label for="deliveryDate" class="form-label">Select a delivery date</label>
+                                            <input type="text" id="deliveryDate" name="deliveryDate" class="form-control" placeholder="Choose a date..." required>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="headingFour">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFour" aria-expanded="false" aria-controls="collapseFour">
+                                        Payment
+                                    </button>
+                                </h2>
+                                <div id="collapseFour" class="accordion-collapse collapse" aria-labelledby="headingFour" data-bs-parent="#checkoutAccordion">
+                                    <div class="accordion-body">
+                                        <div class="mb-3">
+                                            <label for="card-element" class="form-label">Credit or debit card</label>
+                                            <div id="card-element" class="form-control"></div>
+                                            <div id="card-errors" role="alert" class="text-danger mt-2"></div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
-                        <h5 class="mb-3 mt-4">Shipping Address</h5>
-                        
-                        <div class="mb-3">
-                            <label for="shippingName" class="form-label">Full Name</label>
-                            <input type="text" id="shippingName" name="shippingName" class="form-control" th:value="${shippingAddress.name != null} ? ${shippingAddress.name} : ${defaultName}" required>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="shippingAddressLine1" class="form-label">Address Line 1</label>
-                            <input type="text" id="shippingAddressLine1" name="shippingAddressLine1" class="form-control" th:value="${shippingAddress.addressLine1}" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="shippingAddressLine2" class="form-label">Address Line 2 (Optional)</label>
-                            <input type="text" id="shippingAddressLine2" name="shippingAddressLine2" class="form-control" th:value="${shippingAddress.addressLine2}">
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="shippingCity" class="form-label">City</label>
-                                <input type="text" id="shippingCity" name="shippingCity" class="form-control" th:value="${shippingAddress.city}" required>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="shippingProvince" class="form-label">Province</label>
-                                <input type="text" id="shippingProvince" name="shippingProvince" class="form-control" th:value="${shippingAddress.province}" placeholder="e.g., ON" required>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="shippingPostalCode" class="form-label">Postal Code</label>
-                                <input type="text" id="shippingPostalCode" name="shippingPostalCode" class="form-control" th:value="${shippingAddress.postalCode}" placeholder="A1B 2C3" required>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="shippingCountry" class="form-label">Country</label>
-                                <input type="text" id="shippingCountry" name="shippingCountry" class="form-control" th:value="${shippingAddress.country != null} ? ${shippingAddress.country} : 'Canada'" required>
-                            </div>
-                        </div>
-                        
-                        <h5 class="mb-3 mt-4">Delivery Date</h5>
-                        <div class="mb-3">
-                            <label for="deliveryDate" class="form-label">Select a delivery date</label>
-                            <input type="text" id="deliveryDate" name="deliveryDate" class="form-control" placeholder="Choose a date..." required>
-                        </div>
-
-                        <h5 class="mb-3 mt-4">Payment</h5>
-                        <div class="mb-3">
-                            <label for="card-element" class="form-label">Credit or debit card</label>
-                            <div id="card-element" class="form-control"></div>
-                            <div id="card-errors" role="alert" class="text-danger mt-2"></div>
-                        </div>
-
-                        <div th:unless="${order != null}" class="d-grid gap-2">
+                        <div th:unless="${order != null}" class="d-grid gap-2 mt-4">
                             <button class="btn btn-primary" id="payment-button" disabled>
                                 <span id="payment-button-loader" class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="display: none;"></span>
                                 <span id="payment-button-text">Submit Payment</span>
                             </button>
                         </div>
 
-                        <div th:if="${order != null}" class="d-grid gap-2">
+                        <div th:if="${order != null}" class="d-grid gap-2 mt-4">
                             <button class="btn btn-success" id="save-order-button">
                                 <span id="save-order-button-loader" class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="display: none;"></span>
                                 <span id="save-order-button-text">Save Details</span>
@@ -388,7 +462,7 @@
         const deliveryDateHidden = document.getElementById('delivery-date-hidden');
 
         if (deliveryDateInput) {
-            const availableDates = /*[[${availableDates}]]*/;
+            const availableDates = /*[[${availableDates}]]*/ [];
             flatpickr(deliveryDateInput, {
                 enable: availableDates,
                 dateFormat: "Y-m-d",
@@ -399,6 +473,17 @@
                 }
             });
         }
+
+        const sameAsShippingCheckbox = document.getElementById('sameAsShipping');
+        const billingAddressForm = document.getElementById('billingAddressForm');
+
+        sameAsShippingCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                billingAddressForm.style.display = 'none';
+            } else {
+                billingAddressForm.style.display = 'block';
+            }
+        });
     });
 
     /*]]>*/
