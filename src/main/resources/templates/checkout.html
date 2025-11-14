@@ -388,7 +388,7 @@
         const deliveryDateHidden = document.getElementById('delivery-date-hidden');
 
         if (deliveryDateInput) {
-            const availableDates = /*[[${availableDates}]]*/;
+            const availableDates = /*[[${availableDates}]]*/ [];
             flatpickr(deliveryDateInput, {
                 enable: availableDates,
                 dateFormat: "Y-m-d",
