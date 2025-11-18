@@ -103,4 +103,22 @@ public class OrderService {
     }
     return orderRepository.findById(editOrderId);
     }
+
+    public void recalculateOrderTotals(Order order) {
+        if (order == null) {
+            return;
+        }
+        double subtotal = calculateSubtotal(order);
+        double tax = calculateTax(order);
+        double shippingCost = 0.0;
+        if (order.getShippingAddress() != null && !order.getItems().isEmpty()) {
+            shippingCost = shippingService.getShippingCost(order.getShippingAddress()).orElse(0.0);
+        }
+        
+        order.setSubtotal(subtotal);
+        order.setTax(tax);
+        order.setShippingCost(shippingCost);
+        order.setTotal(subtotal + tax + shippingCost);
+    }
+
 }

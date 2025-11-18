@@ -102,8 +102,8 @@ public class BootStrapData implements CommandLineRunner {
 
         // --- seed a couple of orders (only if none exist for this customer) ---
         if (orderRepository.findByUserId(customer.getId()).isEmpty()) {
-            CartItem item1 = new CartItem("prod_12345", "Giant Chocolate Chip Cookie", "Happy Birthday!", "Royal Blue", "#4169E1", 29.99);
-            CartItem item2 = new CartItem("prod_67890", "Dozen Assorted Cookies", "", "", "", 24.99);
+            CartItem item1 = new CartItem("prod_12345", "Large Cookiegram", "Happy Birthday!", "Royal Blue", "#4169E1", 29.99);
+            CartItem item2 = new CartItem("prod_67890", "Large Cookiegram", "", "", "", 24.99);
 
             Order order1 = Order.builder()
                 .userId(customer.getId())

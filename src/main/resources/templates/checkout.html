@@ -123,7 +123,13 @@
                                 </h2>
                                 <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo" data-bs-parent="#checkoutAccordion">
                                     <div class="accordion-body">
-                                        <div id="billingAddressForm">
+                                        <div class="form-check mb-3">
+                                            <input class="form-check-input" type="checkbox" id="sameAsShipping" checked>
+                                            <label class="form-check-label" for="sameAsShipping">
+                                                Same as shipping address
+                                            </label>
+                                        </div>
+                                        <div id="billingAddressForm" style="display: none;">
                                             <div class="mb-3">
                                                 <label for="billingName" class="form-label">Full Name</label>
                                                 <input type="text" id="billingName" name="billingName" class="form-control">
@@ -193,8 +199,14 @@
                             </div>
                         </div>
 
-                        <div th:unless="${order != null}" class="d-grid gap-2 mt-4">
-                            <button class="btn btn-primary" id="payment-button" disabled>
+                        <input type="hidden" id="order-id" name="orderId" th:value="${order != null} ? ${order.id} : ''" />
+                        
+                        <div class="d-grid gap-2 mt-4">
+                            <!-- Return button -->
+                            <a th:if="${order == null}" th:href="@{/cart}" class="btn btn-secondary">Back to Cart</a>
+                            <a th:if="${order != null}" th:href="@{|/order/edit/${order.id}|}" class="btn btn-secondary">Cancel Changes</a>
+
+                            <button th:unless="${order != null}" class="btn btn-primary" id="payment-button" disabled>
                                 <span id="payment-button-loader" class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="display: none;"></span>
                                 <span id="payment-button-text">Submit Payment</span>
                             </button>
@@ -206,8 +218,6 @@
                                 <span id="save-order-button-text">Save Details</span>
                             </button>
                         </div>
-
-                        <input type="hidden" id="order-id" name="orderId" th:value="${order != null} ? ${order.id} : ''" />
                     </form>
                 </div>
             </div>
@@ -277,16 +287,18 @@
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script th:inline="javascript">
     /*<![CDATA[*/
-    
-    // --- (CSRF, Stripe, Elements, State... all correct) ---
+
+    // --- STATE AND ELEMENTS ---
     const csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
     const csrfHeader = document.querySelector('meta[name="_csrf_header"]').getAttribute('content');
     const stripe = Stripe(/*[[${stripePublicKey}]]*/);
     const elements = stripe.elements();
     const cardElement = elements.create('card');
     cardElement.mount('#card-element');
+
     const form = document.getElementById('payment-form');
     const paymentButton = document.getElementById('payment-button');
+    const saveOrderButton = document.getElementById('save-order-button');
     const cardErrorsEl = document.getElementById('card-errors');
     const shippingLoaderEl = document.getElementById('shipping-cost-loader');
     const shippingErrorEl = document.getElementById('shipping-error');
@@ -296,11 +308,20 @@
     const totalDisplayEl = document.getElementById('total-display');
     const amountHiddenEl = document.getElementById('amount-hidden');
     const shippingCostHiddenEl = document.getElementById('shipping-cost-hidden');
-    const saveOrderButton = document.getElementById('save-order-button'); // New: Get save button
+    const sameAsShippingCheckbox = document.getElementById('sameAsShipping');
+    const billingAddressForm = document.getElementById('billingAddressForm');
+
+    const shippingFields = ['shippingName', 'shippingAddressLine1', 'shippingCity', 'shippingProvince', 'shippingPostalCode', 'shippingCountry'];
+    const billingFields = ['billingName', 'billingAddressLine1', 'billingCity', 'billingProvince', 'billingPostalCode', 'billingCountry'];
+    const deliveryDateField = 'deliveryDate';
+
     let subtotal = parseFloat(subtotalEl.getAttribute('data-subtotal'));
     let tax = parseFloat(taxEl.getAttribute('data-tax'));
     let currentShippingCost = 0.0;
-    
+    let isCardComplete = false;
+
+    // --- CORE FUNCTIONS ---
+
     function debounce(func, wait) {
         let timeout;
         return function(...args) {
@@ -310,66 +331,171 @@
         };
     }
 
+    function checkFormValidity() {
+        let isFormValid = true;
+
+        // 1. Check shipping fields
+        for (const id of shippingFields) {
+            const input = document.getElementById(id);
+            if (!input || input.value.trim() === '') {
+                isFormValid = false;
+                break;
+            }
+        }
+
+        // 2. Check billing fields if checkbox is unchecked
+        if (isFormValid && !sameAsShippingCheckbox.checked) {
+            for (const id of billingFields) {
+                const input = document.getElementById(id);
+                if (!input || input.value.trim() === '') {
+                    isFormValid = false;
+                    break;
+                }
+            }
+        }
+
+        // 3. Check delivery date
+        if (isFormValid) {
+            const deliveryDateInput = document.getElementById(deliveryDateField);
+            if (!deliveryDateInput || deliveryDateInput.value.trim() === '') {
+                isFormValid = false;
+            }
+        }
+        
+        // 4. Check Stripe card element
+        if (!isCardComplete) {
+            isFormValid = false;
+        }
+
+        // 5. Enable/disable button
+        if (paymentButton) {
+            paymentButton.disabled = !isFormValid;
+        }
+        if (saveOrderButton) {
+            saveOrderButton.disabled = !isFormValid;
+        }
+    }
+    
     async function calculateShipping() {
         toggleSpinner(true); 
         shippingErrorEl.textContent = ''; 
         
         const address = {
-            name: document.getElementById('shippingName').value,
-            addressLine1: document.getElementById('shippingAddressLine1').value,
-            addressLine2: document.getElementById('shippingAddressLine2').value,
-            city: document.getElementById('shippingCity').value,
-            province: document.getElementById('shippingProvince').value,
-            postalCode: document.getElementById('shippingPostalCode').value,
-            country: document.getElementById('shippingCountry').value
+            postalCode: document.getElementById('shippingPostalCode').value
         };
 
         if (!address.postalCode) {
-            shippingErrorEl.textContent = ''; 
             toggleSpinner(false);
+            updateOrderSummary();
+            checkFormValidity();
             return; 
         }
 
         try {
             const response = await fetch('/api/shipping/calculate', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    [csrfHeader]: csrfToken 
-                },
+                headers: { 'Content-Type': 'application/json', [csrfHeader]: csrfToken },
                 body: JSON.stringify(address)
             });
 
             const data = await response.json();
 
-            if (!response.ok) {
-                throw new Error(data.error || 'Could not calculate shipping.');
-            }
+            if (!response.ok) throw new Error(data.error || 'Could not calculate shipping.');
 
             currentShippingCost = parseFloat(data.shippingCost);
-            updateOrderSummary();
-            if (paymentButton) paymentButton.disabled = false; // Enable payment button if it exists
-            if (saveOrderButton) saveOrderButton.disabled = false; // Enable save button if it exists
             shippingErrorEl.textContent = '';
 
         } catch (error) {
             shippingErrorEl.textContent = error.message;
-            if (paymentButton) paymentButton.disabled = true;
-            if (saveOrderButton) saveOrderButton.disabled = true;
+            currentShippingCost = 0;
         } finally {
             toggleSpinner(false);
+            updateOrderSummary();
+            checkFormValidity();
         }
     }
 
-    // Event listener for "Submit Payment" button
+    function updateOrderSummary() {
+        const newTotal = subtotal + tax + currentShippingCost;
+        shippingCostDisplayEl.textContent = `$${currentShippingCost.toFixed(2)}`;
+        totalDisplayEl.textContent = `$${newTotal.toFixed(2)}`;
+        shippingCostHiddenEl.value = currentShippingCost.toFixed(2);
+        amountHiddenEl.value = (newTotal * 100).toFixed(0);
+    }
+
+    function toggleSpinner(isLoading, buttonType = 'shipping') {
+        let spinnerEl, textEl, buttonEl;
+
+        if (buttonType === 'payment' && paymentButton) {
+            spinnerEl = document.getElementById('payment-button-loader');
+            textEl = document.getElementById('payment-button-text');
+            buttonEl = paymentButton;
+        } else if (buttonType === 'save' && saveOrderButton) {
+            spinnerEl = document.getElementById('save-order-button-loader');
+            textEl = document.getElementById('save-order-button-text');
+            buttonEl = saveOrderButton;
+        } else {
+             shippingLoaderEl.style.display = isLoading ? 'inline-block' : 'none';
+             return;
+        }
+
+        if (isLoading) {
+            textEl.style.display = 'none';
+            spinnerEl.style.display = 'inline-block';
+            buttonEl.disabled = true;
+        } else {
+            textEl.style.display = 'inline-block';
+            spinnerEl.style.display = 'none';
+            checkFormValidity(); // Re-check validity to set button state
+        }
+    }
+    
+    // --- EVENT LISTENERS ---
+
+    const debouncedCalculateShipping = debounce(calculateShipping, 600);
+
+    // Listen to all required fields for validation
+    const allRequiredFields = [...shippingFields, ...billingFields, deliveryDateField];
+    allRequiredFields.forEach(id => {
+        const input = document.getElementById(id);
+        if (input) {
+            input.addEventListener('input', checkFormValidity);
+        }
+    });
+
+    // Special handling for postal code to trigger shipping calculation
+    const postalCodeInput = document.getElementById('shippingPostalCode');
+    if (postalCodeInput) {
+        postalCodeInput.addEventListener('input', debouncedCalculateShipping);
+    }
+
+    // Stripe card element listener
+    cardElement.on('change', (event) => {
+        if (event.error) {
+            cardErrorsEl.textContent = event.error.message;
+            isCardComplete = false;
+        } else {
+            cardErrorsEl.textContent = '';
+            isCardComplete = event.complete;
+        }
+        checkFormValidity();
+    });
+
+    // "Same as shipping" checkbox listener
+    sameAsShippingCheckbox.addEventListener('change', function() {
+        billingAddressForm.style.display = this.checked ? 'none' : 'block';
+        checkFormValidity();
+    });
+
+    // Form submission handlers
     if (paymentButton) {
         form.addEventListener('submit', async (event) => {
             event.preventDefault();
-            togglePaymentSpinner(true);
-            const {token, error} = await stripe.createToken(cardElement);
+            toggleSpinner(true, 'payment');
+            const { token, error } = await stripe.createToken(cardElement);
             if (error) {
                 cardErrorsEl.textContent = error.message;
-                togglePaymentSpinner(false);
+                toggleSpinner(false, 'payment');
             } else {
                 const hiddenInput = document.createElement('input');
                 hiddenInput.setAttribute('type', 'hidden');
@@ -381,109 +507,43 @@
         });
     }
 
-    // Event listener for "Save Order" button
     if (saveOrderButton) {
         saveOrderButton.addEventListener('click', (event) => {
             event.preventDefault();
-            toggleSaveSpinner(true);
+            toggleSpinner(true, 'save');
             const orderId = document.getElementById('order-id').value;
-            form.action = '/checkout/edit/' + orderId; // Set form action for saving
+            form.action = '/checkout/edit/' + orderId;
             form.submit();
         });
     }
-
-    function updateOrderSummary() {
-        const newTotal = subtotal + tax + currentShippingCost;
-        shippingCostDisplayEl.textContent = `$${currentShippingCost.toFixed(2)}`;
-        totalDisplayEl.textContent = `$${newTotal.toFixed(2)}`;
-        shippingCostHiddenEl.value = currentShippingCost.toFixed(2);
-        amountHiddenEl.value = (newTotal * 100).toFixed(0);
-    }
-
-    function toggleSpinner(isLoading) {
-        shippingLoaderEl.style.display = isLoading ? 'inline-block' : 'none';
-    }
-
-    function togglePaymentSpinner(isLoading) {
-        if (!paymentButton) return; // Only run if payment button exists
-        const textEl = document.getElementById('payment-button-text');
-        const spinnerEl = document.getElementById('payment-button-loader');
-        if (isLoading) {
-            textEl.style.display = 'none';
-            spinnerEl.style.display = 'inline-block';
-            paymentButton.disabled = true;
-        } else {
-            textEl.style.display = 'inline-block';
-            spinnerEl.style.display = 'none';
-            paymentButton.disabled = (currentShippingCost < 0);
-        }
-    }
-
-    // New: Function to toggle spinner for "Save Order" button
-    function toggleSaveSpinner(isLoading) {
-        if (!saveOrderButton) return; // Only run if save button exists
-        const textEl = document.getElementById('save-order-button-text');
-        const spinnerEl = document.getElementById('save-order-button-loader');
-        if (isLoading) {
-            textEl.style.display = 'none';
-            spinnerEl.style.display = 'inline-block';
-            saveOrderButton.disabled = true;
-        } else {
-            textEl.style.display = 'inline-block';
-            spinnerEl.style.display = 'none';
-            saveOrderButton.disabled = false; // Save button is always enabled once shipping is calculated
-        }
-    }
     
-    const debouncedCalculateShipping = debounce(calculateShipping, 600);
-    const addressFields = ['shippingName', 'shippingAddressLine1', 'shippingAddressLine2', 'shippingCity', 'shippingProvince', 'shippingPostalCode', 'shippingCountry'];
-    
-    addressFields.forEach(id => {
-        const input = document.getElementById(id);
-        if (input) {
-            input.addEventListener('input', () => {
-                if (paymentButton) paymentButton.disabled = true; 
-                if (saveOrderButton) saveOrderButton.disabled = true;
-                shippingErrorEl.textContent = '';
-                debouncedCalculateShipping();
-            });
-        }
-    });
+    // --- INITIALIZATION ---
 
-    // --- FIX 4: ADDED BACK THE PAGE-LOAD CALCULATOR ---
     document.addEventListener('DOMContentLoaded', () => {
-        // Check if postal code is already filled (by autocomplete)
-        const initialPostalCode = document.getElementById('shippingPostalCode').value;
-        if (initialPostalCode) {
-            calculateShipping();
-        }
-
-        const deliveryDateInput = document.getElementById('deliveryDate');
+        // Initialize Flatpickr for delivery date
+        const deliveryDateInput = document.getElementById(deliveryDateField);
         const deliveryDateHidden = document.getElementById('delivery-date-hidden');
-
         if (deliveryDateInput) {
             const availableDates = /*[[${availableDates}]]*/ [];
             flatpickr(deliveryDateInput, {
                 enable: availableDates,
                 dateFormat: "Y-m-d",
                 onChange: function(selectedDates, dateStr, instance) {
-                    if (deliveryDateHidden) {
-                        deliveryDateHidden.value = dateStr;
-                    }
+                    if (deliveryDateHidden) deliveryDateHidden.value = dateStr;
+                    checkFormValidity();
                 }
             });
         }
 
-        const sameAsShippingCheckbox = document.getElementById('sameAsShipping');
-        const billingAddressForm = document.getElementById('billingAddressForm');
-
-        sameAsShippingCheckbox.addEventListener('change', function() {
-            if (this.checked) {
-                billingAddressForm.style.display = 'none';
-            } else {
-                billingAddressForm.style.display = 'block';
-            }
-        });
+        // Initial check for shipping cost if postal code is pre-filled
+        if (postalCodeInput && postalCodeInput.value) {
+            calculateShipping();
+        } else {
+            updateOrderSummary();
+        }
+        
+        // Initial form validity check
+        checkFormValidity();
     });
 
     /*]]>*/

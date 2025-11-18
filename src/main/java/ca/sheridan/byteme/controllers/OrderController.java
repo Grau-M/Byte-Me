@@ -1,6 +1,7 @@
 package ca.sheridan.byteme.controllers;
 
 import ca.sheridan.byteme.beans.Order;
+import ca.sheridan.byteme.beans.ShippingAddress;
 import ca.sheridan.byteme.models.CartItem;
 import ca.sheridan.byteme.services.CartService;
 import ca.sheridan.byteme.services.OrderService;
@@ -156,13 +157,12 @@ public class OrderController {
 
         List<CartItem> orderItems = order.getItems();
 
-        order.setSubtotal(orderService.calculateSubtotal(order));
-        order.setTax(orderService.calculateTax(order));
-        order.setTotal(orderService.calculateTotal(order));
+        orderService.recalculateOrderTotals(order); // New line
 
         model.addAttribute("order", order);
 
         model.addAttribute("cartCount", orderItems.size());
+        model.addAttribute("isShippingAddressComplete", isShippingAddressComplete(order.getShippingAddress())); // New line
 
         return "edit-order";
     }
@@ -178,10 +178,7 @@ public class OrderController {
             return "redirect:/dashboard";
         }
 
-        order.setSubtotal(orderService.calculateSubtotal(order));
-        order.setTax(orderService.calculateTax(order));
-        order.setTotal(orderService.calculateTotal(order));
-
+        orderService.recalculateOrderTotals(order); // New line
         orderService.updateOrder(order);
 
         session.removeAttribute("editOrderId");
@@ -269,6 +266,20 @@ public class OrderController {
                 break;
         }
         return details;
+    }
+
+    private boolean isShippingAddressComplete(ShippingAddress address) {
+        return address != null &&
+               !isNullOrBlank(address.getName()) &&
+               !isNullOrBlank(address.getAddressLine1()) &&
+               !isNullOrBlank(address.getCity()) &&
+               !isNullOrBlank(address.getProvince()) &&
+               !isNullOrBlank(address.getPostalCode()) &&
+               !isNullOrBlank(address.getCountry());
+    }
+
+    private boolean isNullOrBlank(String str) {
+        return str == null || str.isBlank();
     }
 }
 

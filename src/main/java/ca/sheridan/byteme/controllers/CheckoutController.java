@@ -266,13 +266,13 @@ public class CheckoutController {
     }
     @PostMapping("/checkout/edit/{orderId}")
     public String saveEditedOrder(@PathVariable String orderId,
-                                @RequestParam String shippingName,
-                                @RequestParam String shippingAddressLine1,
+                                @RequestParam(required = false) String shippingName,
+                                @RequestParam(required = false) String shippingAddressLine1,
                                 @RequestParam(required = false) String shippingAddressLine2,
-                                @RequestParam String shippingCity,
-                                @RequestParam String shippingProvince,
-                                @RequestParam String shippingPostalCode,
-                                @RequestParam String shippingCountry,
+                                @RequestParam(required = false) String shippingCity,
+                                @RequestParam(required = false) String shippingProvince,
+                                @RequestParam(required = false) String shippingPostalCode,
+                                @RequestParam(required = false) String shippingCountry,
                                 @RequestParam(name = "deliveryDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate deliveryDate,
                                 @RequestParam(name = "billingName", required = false) String billingName,
                                 @RequestParam(name = "billingAddressLine1", required = false) String billingAddressLine1,
@@ -320,12 +320,7 @@ public class CheckoutController {
         order.setBillingAddress(billingAddress);
         order.setDeliveryDate(deliveryDate);
 
-        // Recalculate shipping cost
-        Optional<Double> shippingCostOpt = shippingService.getShippingCost(updatedAddress);
-        order.setShippingCost(shippingCostOpt.orElse(order.getShippingCost()));
-
-        // Update total
-        order.setTotal(order.getSubtotal() + order.getTax() + order.getShippingCost());
+        orderService.recalculateOrderTotals(order); // New line
 
         orderService.updateOrder(order);
         deliveryDateService.addOrderToDate(deliveryDate);
