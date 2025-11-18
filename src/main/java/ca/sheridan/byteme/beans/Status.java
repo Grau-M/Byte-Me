@@ -6,5 +6,6 @@ public enum Status {
     Baking, 
     Ready_for_Shipment, 
     Shipped,
+    Delivered,
     Canceled
 }
