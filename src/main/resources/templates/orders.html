@@ -32,7 +32,7 @@
             padding-bottom: 4rem;
         }
         .status-select {
-            max-width: 220px;
+            max-width: 180px;
         }
         .table-responsive {
             margin-top: 1.5rem;
@@ -88,7 +88,7 @@
             </div>
 
             <div th:if="${!#lists.isEmpty(orders)}" class="table-responsive">
-                <table class="table align-middle">
+                <table class="table align-middle orders-table">
                     <thead class="table-light">
                     <tr>
                         <th scope="col">Order ID</th>
@@ -131,15 +131,13 @@
                                         class="form-select form-select-sm status-select"
                                         aria-label="Order status">
                                     <option th:each="status : ${statuses}"
+                                            th:if="${order.status.name() != 'Canceled' or status == order.status or (order.statusBeforeCancel != null and status == order.statusBeforeCancel)}"
                                             th:value="${status}"
-                                            th:text="${status}"
+                                            th:text="${status == order.statusBeforeCancel ? #strings.replace(status.name(), '_', ' ') + ' (Previous Status)' : #strings.replace(status.name(), '_', ' ')}"
                                             th:selected="${status == order.status}">
                                     </option>
                                 </select>
-                                <small class="text-muted" th:if="${order.status.name() == 'Canceled' and order.statusBeforeCancel != null}">
-                                    Previous status: <span th:text="${order.statusBeforeCancel}">Previous</span>
-                                </small>
-
+                                
                                 <button type="submit" class="btn btn-sm btn-primary">
                                     <i class="bi bi-arrow-repeat me-1"></i> Update
                                 </button>
