@@ -108,8 +108,16 @@
                         <td th:text="${order.deliveryDate}"></td>
                         <td th:text="${#numbers.formatDecimal(order.total, 1, 'COMMA', 2, 'POINT')}"></td>
                         <td>
-                            <span class="badge bg-secondary"
-                                  th:text="${order.status}">Pending</span>
+                            <span class="badge fs-6"
+                                  th:classappend="${order.status.name() == 'Pending' ? ' bg-warning text-dark' :
+                                                   order.status.name() == 'Confirmed' ? ' bg-info text-dark' :
+                                                   order.status.name() == 'Baking' ? ' bg-primary text-light' :
+                                                   order.status.name() == 'Ready_for_Shipment' ? ' bg-secondary text-light' :
+                                                   order.status.name() == 'Shipped' ? ' bg-success text-light' :
+                                                   order.status.name() == 'Delivered' ? ' bg-dark text-light' :
+                                                   order.status.name() == 'Canceled' ? ' bg-danger text-light' :
+                                                                                       ' bg-dark text-light'}"
+                                  th:text="${#strings.replace(order.status.name(), '_', ' ')}">Pending</span>
                         </td>
                         <td>
                             <form th:action="@{|/orders/${order.id}/status|}" method="post"
