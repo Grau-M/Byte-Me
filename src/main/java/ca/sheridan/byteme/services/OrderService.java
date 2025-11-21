@@ -47,9 +47,11 @@ public class OrderService {
     // Order Operations
     // -----------------------------
     public boolean cancelOrder(Order order) {
+        // Customer-facing cancel: only allow when pending
         if (order.getStatus() != Status.Pending) {
             return false;
         }
+        order.setStatusBeforeCancel(order.getStatus());
         order.setStatus(Status.Canceled);
         updateOrder(order);
         return true;
@@ -135,19 +137,27 @@ public class OrderService {
          *  - Any status can move to Canceled.
          *  - No backward moves or skipping steps.
          */
-        private boolean isValidStatusTransition(Status current, Status target) {
-            if (current == null || target == null) {
+        private boolean isValidStatusTransition(Order order, Status target) {
+            if (order == null || target == null) {
                 return false;
             }
+
+            Status current = order.getStatus();
 
             // No-op change
             if (current == target) {
                 return false;
             }
 
-            // Any status can be cancelled
+            // Allow cancel from any state
             if (target == Status.Canceled) {
                 return true;
+            }
+
+            // Restore path: allow returning from Canceled to the immediate prior status
+            if (current == Status.Canceled) {
+                Status prior = order.getStatusBeforeCancel();
+                return prior != null && target == prior;
             }
 
             // Ordered happy-path statuses
@@ -192,10 +202,17 @@ public class OrderService {
             Order order = orderOpt.get();
             Status currentStatus = order.getStatus();
 
-            if (!isValidStatusTransition(currentStatus, newStatus)) {
+            if (!isValidStatusTransition(order, newStatus)) {
                 throw new IllegalArgumentException(
                         String.format("Invalid status change from %s to %s.", currentStatus, newStatus)
                 );
+            }
+
+            // Track where we came from when cancelling; clear when restoring
+            if (newStatus == Status.Canceled) {
+                order.setStatusBeforeCancel(currentStatus);
+            } else if (currentStatus == Status.Canceled) {
+                order.setStatusBeforeCancel(null);
             }
 
             order.setStatus(newStatus);

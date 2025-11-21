@@ -37,6 +37,7 @@ public class Order {
 
     @Builder.Default
     private Status status = Status.Pending;
+    private Status statusBeforeCancel;
 
 
 }

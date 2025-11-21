@@ -136,6 +136,9 @@
                                             th:selected="${status == order.status}">
                                     </option>
                                 </select>
+                                <small class="text-muted" th:if="${order.status.name() == 'Canceled' and order.statusBeforeCancel != null}">
+                                    Previous status: <span th:text="${order.statusBeforeCancel}">Previous</span>
+                                </small>
 
                                 <button type="submit" class="btn btn-sm btn-primary">
                                     <i class="bi bi-arrow-repeat me-1"></i> Update
