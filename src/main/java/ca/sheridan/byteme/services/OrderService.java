@@ -121,4 +121,91 @@ public class OrderService {
         order.setTotal(subtotal + tax + shippingCost);
     }
 
+                    // -----------------------------
+                // Staff / Admin Operations
+                // -----------------------------
+                public List<Order> getAllOrders() {
+                    return orderRepository.findAll();
+                }
+
+                /**
+         * Validates if we can move from the current status to the new status.
+         * Rules:
+         *  - Allowed forward chain: Pending -> Confirmed -> Baking -> Ready_for_Shipment -> Shipped -> Delivered
+         *  - Any status can move to Canceled.
+         *  - No backward moves or skipping steps.
+         */
+        private boolean isValidStatusTransition(Status current, Status target) {
+            if (current == null || target == null) {
+                return false;
+            }
+
+            // No-op change
+            if (current == target) {
+                return false;
+            }
+
+            // Any status can be cancelled
+            if (target == Status.Canceled) {
+                return true;
+            }
+
+            // Ordered happy-path statuses
+            List<Status> orderedStatuses = List.of(
+                    Status.Pending,
+                    Status.Confirmed,
+                    Status.Baking,
+                    Status.Ready_for_Shipment,
+                    Status.Shipped,
+                    Status.Delivered
+            );
+
+            int currentIndex = orderedStatuses.indexOf(current);
+            int targetIndex = orderedStatuses.indexOf(target);
+
+            // Only allow a *single step* forward
+            return currentIndex != -1 && targetIndex == currentIndex + 1;
+        }
+
+                /**
+         * Updates the status of an order, enforcing allowed transitions.
+         *
+         * @param orderId   the ID of the order to update
+         * @param newStatus the requested new status
+         * @return Optional<Order> with the updated order, or Optional.empty() if not found
+         * @throws IllegalArgumentException if the transition is not allowed or arguments are invalid
+         */
+        public Optional<Order> updateOrderStatus(String orderId, Status newStatus) {
+            if (orderId == null || orderId.isBlank()) {
+                throw new IllegalArgumentException("Order id is required.");
+            }
+            if (newStatus == null) {
+                throw new IllegalArgumentException("New status is required.");
+            }
+
+            Optional<Order> orderOpt = orderRepository.findById(orderId);
+            if (orderOpt.isEmpty()) {
+                // Covers the "order no longer exists" rainy-day scenario
+                return Optional.empty();
+            }
+
+            Order order = orderOpt.get();
+            Status currentStatus = order.getStatus();
+
+            if (!isValidStatusTransition(currentStatus, newStatus)) {
+                throw new IllegalArgumentException(
+                        String.format("Invalid status change from %s to %s.", currentStatus, newStatus)
+                );
+            }
+
+            order.setStatus(newStatus);
+            // Reuse your existing update method (does validation + save)
+            updateOrder(order);
+
+            return Optional.of(order);
+        }
+
+
+
+
 }

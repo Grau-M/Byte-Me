@@ -35,7 +35,6 @@ public class SecurityConfig {
             )
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(
-                    "/api/v1/auth/**", 
                     "/h2-console/**",
                     "/",
                     "/login",
@@ -44,9 +43,12 @@ public class SecurityConfig {
                     "/order", "/add-to-cart", "/cart", "/cart/**", "/checkout", "/charge", "/result",
                     "/api/shipping/calculate"
                 ).permitAll()
+                // NEW: staff/admin-only order management
+                .requestMatchers("/orders/**").hasAnyAuthority("STAFF", "ADMIN")
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/cart").permitAll()
                 .anyRequest().authenticated()
-            )
+        )
+
             .authenticationProvider(authenticationProvider);
             
         return http.build();
