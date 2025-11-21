@@ -1,15 +1,23 @@
 package ca.sheridan.byteme.controllers;
 
 import ca.sheridan.byteme.beans.Order;
+import ca.sheridan.byteme.beans.Role;
 import ca.sheridan.byteme.beans.Status;
-import ca.sheridan.byteme.services.NotificationService;
-import ca.sheridan.byteme.services.OrderService;
+import ca.sheridan.byteme.beans.User;
+import ca.sheridan.byteme.services.*;
 import lombok.RequiredArgsConstructor;
+import java.security.Principal;
+
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
 
@@ -24,12 +32,30 @@ public class StaffOrderController {
 
     private final OrderService orderService;
     private final NotificationService notificationService;
+    
 
     @GetMapping
-    public String showOrders(Model model) {
+    public String showOrders(Model model, Principal principal) {
         List<Order> orders = orderService.getAllOrders();
         model.addAttribute("orders", orders);
         model.addAttribute("statuses", Status.values());
+
+        // --- 1. Dynamic Clock (unchanged) ---
+        ZoneId userZone = ZoneId.of("America/Toronto");
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.getPrincipal() instanceof User currentUser) {
+            if (currentUser.getTimezone() != null && !currentUser.getTimezone().isEmpty()) {
+                userZone = ZoneId.of(currentUser.getTimezone());
+            }
+
+           
+        }
+
+        ZonedDateTime zonedTime = ZonedDateTime.now(userZone);
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("h:mm:ss a");
+        String formattedTime = zonedTime.format(formatter);
+        model.addAttribute("currentTime", formattedTime);
+
         return "orders";
     }
 

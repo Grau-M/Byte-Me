@@ -41,8 +41,9 @@
 </head>
 <body>
 
-<!-- Top nav -->
-<div th:replace="fragments/nav :: mainNav"></div>
+<!-- Top Navigation Bar (fragment) -->
+  <div th:replace="fragments/nav :: dashboardNav"></div>
+
 
 <main class="container">
     <div class="d-flex align-items-center justify-content-between mb-3">
@@ -179,6 +180,6 @@
         });
     });
 </script>
-
+<script th:src="@{/js/scripts.js}"></script>
 </body>
 </html>
