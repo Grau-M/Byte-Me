@@ -7,6 +7,10 @@ import ca.sheridan.byteme.repositories.OrderRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Optional;
 
@@ -29,6 +33,28 @@ public class OrderService {
 
     public List<Order> getOrdersForUser(String userId) {
         return orderRepository.findByUserId(userId);
+    }
+
+    public List<Order> searchOrders(String userId, String searchTerm) {
+        // Try to parse as a date (YYYY-MM-DD or MM/DD/YYYY)
+        try {
+            LocalDate searchDate = LocalDate.parse(searchTerm, DateTimeFormatter.ISO_LOCAL_DATE);
+            LocalDateTime startOfDay = searchDate.atStartOfDay();
+            LocalDateTime endOfDay = searchDate.plusDays(1).atStartOfDay().minusNanos(1);
+            return orderRepository.findByUserIdAndOrderDateBetween(userId, startOfDay, endOfDay);
+        } catch (DateTimeParseException e) {
+            // If not a date, perform a general text search
+            return orderRepository.findByUserIdAndSearchTerm(userId, searchTerm);
+        }
+    }
+
+    public List<Order> filterOrders(String userId, String filter) {
+        try {
+            Status status = Status.valueOf(filter);
+            return orderRepository.findByUserIdAndStatus(userId, status);
+        } catch (IllegalArgumentException e) {
+            return List.of();
+        }
     }
 
     public Order getOrderById(String orderId) {
@@ -221,8 +247,5 @@ public class OrderService {
 
             return Optional.of(order);
         }
-
-
-
-
 }
+

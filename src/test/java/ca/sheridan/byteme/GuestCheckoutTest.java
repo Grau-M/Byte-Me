@@ -87,7 +87,7 @@ public class GuestCheckoutTest {
         charge.setAmount((long) ((total + shippingCost) * 100));
         charge.setId("ch_123");
 
-        when(stripeService.charge(any(ChargeRequest.class), eq(null), any(ShippingAddress.class)))
+        when(stripeService.charge(any(), any(), any()))
                 .thenReturn(charge);
 
         // --- Mock OrderService call ---
