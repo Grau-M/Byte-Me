@@ -24,4 +24,6 @@ public interface OrderRepository extends MongoRepository<Order, String> {
     List<Order> findByUserIdAndSearchTerm(String userId, String searchTerm);
 
     List<Order> findByUserIdAndOrderDateBetween(String userId, LocalDateTime startOfDay, LocalDateTime endOfDay);
+
+    List<Order> findByUserIdOrderByOrderDateDesc(String userId);
 }

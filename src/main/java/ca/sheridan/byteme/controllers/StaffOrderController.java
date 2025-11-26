@@ -1,7 +1,6 @@
 package ca.sheridan.byteme.controllers;
 
 import ca.sheridan.byteme.beans.Order;
-import ca.sheridan.byteme.beans.Role;
 import ca.sheridan.byteme.beans.Status;
 import ca.sheridan.byteme.beans.User;
 import ca.sheridan.byteme.services.*;

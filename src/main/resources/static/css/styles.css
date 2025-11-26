@@ -449,3 +449,11 @@ footer{
 .orders-table .status-select {
   min-height: 1.8rem;
 }
+
+.status-pending { color: orange; }
+.status-confirmed { color: blue; }
+.status-baking { color: purple; }
+.status-ready_for_shipment { color: gray; }
+.status-shipped { color: green; }
+.status-canceled { color: red; }
+.status-delivered { color: black; }

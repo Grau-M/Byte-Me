@@ -1,7 +1,6 @@
 package ca.sheridan.byteme;
 
 import ca.sheridan.byteme.beans.Order;
-import ca.sheridan.byteme.beans.ShippingAddress;
 import ca.sheridan.byteme.controllers.CheckoutController;
 import ca.sheridan.byteme.models.ChargeRequest;
 import ca.sheridan.byteme.services.CartService;
@@ -22,7 +21,6 @@ import java.util.ArrayList;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 

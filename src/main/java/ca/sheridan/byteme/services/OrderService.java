@@ -32,7 +32,7 @@ public class OrderService {
     }
 
     public List<Order> getOrdersForUser(String userId) {
-        return orderRepository.findByUserId(userId);
+        return orderRepository.findByUserIdOrderByOrderDateDesc(userId);
     }
 
     public List<Order> searchOrders(String userId, String searchTerm) {

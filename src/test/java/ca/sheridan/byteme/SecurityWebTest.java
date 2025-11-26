@@ -4,6 +4,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -123,6 +124,7 @@ class SecurityWebTest {
             .andReturn();
  
         MockHttpSession session = (MockHttpSession) result.getRequest().getSession(false);
+        assertNotNull(session, "Session should not be null after a successful login");
         mockMvc.perform(get("/dashboard").session(session))
             .andExpect(status().isOk())
             .andExpect(content().string(not(containsString("Admin Dashboard"))))
@@ -149,6 +151,7 @@ class SecurityWebTest {
             .andReturn();
  
         MockHttpSession session = (MockHttpSession) result.getRequest().getSession(false);
+        assertNotNull(session, "Session should not be null after a successful login");
  
         mockMvc.perform(post("/logout").session(session).with(csrf()))
             .andExpect(status().is3xxRedirection())
