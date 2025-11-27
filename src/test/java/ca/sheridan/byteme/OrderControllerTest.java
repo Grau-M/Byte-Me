@@ -5,6 +5,7 @@ import ca.sheridan.byteme.models.CartItem;
 import ca.sheridan.byteme.services.CartService;
 import ca.sheridan.byteme.services.OrderService;
 import ca.sheridan.byteme.services.ProfanityFilterService;
+import jakarta.servlet.http.HttpSession;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -31,6 +32,9 @@ public class OrderControllerTest {
     @Mock
     private RedirectAttributes redirectAttributes;
 
+    @Mock
+    private HttpSession session;
+
     @InjectMocks
     private OrderController orderController;
 
@@ -40,7 +44,7 @@ public class OrderControllerTest {
         when(profanityFilterService.hasProfanity("Clean message")).thenReturn(false);
 
         // Act
-        String result = orderController.addToCart("prod1", "Product 1", 10.0, "Clean message", "white", false, null, null, redirectAttributes);
+        String result = orderController.addToCart("prod1", "Product 1", 10.0, "Clean message", "white", false, null, null, redirectAttributes, session);
 
         // Assert
         assertEquals("redirect:/order", result);
@@ -52,7 +56,7 @@ public class OrderControllerTest {
         when(profanityFilterService.hasProfanity("Dirty message")).thenReturn(true);
 
         // Act
-        String result = orderController.addToCart("prod1", "Product 1", 10.0, "Dirty message", "white", false, null, null, redirectAttributes);
+        String result = orderController.addToCart("prod1", "Product 1", 10.0, "Dirty message", "white", false, null, null, redirectAttributes, session);
 
         // Assert
         assertEquals("redirect:/order", result);
@@ -71,7 +75,7 @@ public class OrderControllerTest {
         when(profanityFilterService.hasProfanity("Updated message")).thenReturn(false);
 
         // Act
-        String result = orderController.addToCart("prod1", "Product 1", 10.0, "Updated message", "blue", false, "item123", "order123", redirectAttributes);
+        String result = orderController.addToCart("prod1", "Product 1", 10.0, "Updated message", "blue", false, "item123", "order123", redirectAttributes, session);
 
         // Assert
         assertEquals("redirect:/order/edit/order123", result);

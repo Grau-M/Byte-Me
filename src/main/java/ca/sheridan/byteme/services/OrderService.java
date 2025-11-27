@@ -7,6 +7,10 @@ import ca.sheridan.byteme.repositories.OrderRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Optional;
 
@@ -28,7 +32,29 @@ public class OrderService {
     }
 
     public List<Order> getOrdersForUser(String userId) {
-        return orderRepository.findByUserId(userId);
+        return orderRepository.findByUserIdOrderByOrderDateDesc(userId);
+    }
+
+    public List<Order> searchOrders(String userId, String searchTerm) {
+        // Try to parse as a date (YYYY-MM-DD or MM/DD/YYYY)
+        try {
+            LocalDate searchDate = LocalDate.parse(searchTerm, DateTimeFormatter.ISO_LOCAL_DATE);
+            LocalDateTime startOfDay = searchDate.atStartOfDay();
+            LocalDateTime endOfDay = searchDate.plusDays(1).atStartOfDay().minusNanos(1);
+            return orderRepository.findByUserIdAndOrderDateBetween(userId, startOfDay, endOfDay);
+        } catch (DateTimeParseException e) {
+            // If not a date, perform a general text search
+            return orderRepository.findByUserIdAndSearchTerm(userId, searchTerm);
+        }
+    }
+
+    public List<Order> filterOrders(String userId, String filter) {
+        try {
+            Status status = Status.valueOf(filter);
+            return orderRepository.findByUserIdAndStatus(userId, status);
+        } catch (IllegalArgumentException e) {
+            return List.of();
+        }
     }
 
     public Order getOrderById(String orderId) {
@@ -47,9 +73,11 @@ public class OrderService {
     // Order Operations
     // -----------------------------
     public boolean cancelOrder(Order order) {
+        // Customer-facing cancel: only allow when pending
         if (order.getStatus() != Status.Pending) {
             return false;
         }
+        order.setStatusBeforeCancel(order.getStatus());
         order.setStatus(Status.Canceled);
         updateOrder(order);
         return true;
@@ -60,6 +88,15 @@ public class OrderService {
             return;
         }
         order.getItems().removeIf(item -> item.id().equals(itemId));
+
+        // Recalculate totals
+        order.setSubtotal(calculateSubtotal(order));
+        order.setTax(calculateTax(order));
+        order.setTotal(calculateTotal(order));
+        if (order.getItems().isEmpty()) {
+            order.setShippingCost(0.0);
+        }
+
         updateOrder(order);
     }
 
@@ -82,7 +119,7 @@ public class OrderService {
         double tax = calculateTax(order);
         double shippingCost = 0.0;
 
-        if (order.getShippingAddress() != null) {
+        if (order.getShippingAddress() != null && !order.getItems().isEmpty()) {
             shippingCost = shippingService.getShippingCost(order.getShippingAddress()).orElse(0.0);
         }
         return subtotal + tax + shippingCost;
@@ -94,4 +131,179 @@ public class OrderService {
     }
     return orderRepository.findById(editOrderId);
     }
+
+    public void recalculateOrderTotals(Order order) {
+        if (order == null) {
+            return;
+        }
+        double subtotal = calculateSubtotal(order);
+        double tax = calculateTax(order);
+        double shippingCost = 0.0;
+        if (order.getShippingAddress() != null && !order.getItems().isEmpty()) {
+            shippingCost = shippingService.getShippingCost(order.getShippingAddress()).orElse(0.0);
+        }
+        
+        order.setSubtotal(subtotal);
+        order.setTax(tax);
+        order.setShippingCost(shippingCost);
+        order.setTotal(subtotal + tax + shippingCost);
+    }
+
+                    // -----------------------------
+                // Staff / Admin Operations
+                // -----------------------------
+                public List<Order> getAllOrders() {
+                    return orderRepository.findAll();
+                }
+
+                /**
+         * Validates if we can move from the current status to the new status.
+         * Rules:
+         *  - Allowed forward chain: Pending -> Confirmed -> Baking -> Ready_for_Shipment -> Shipped -> Delivered
+         *  - Any status can move to Canceled.
+         *  - No backward moves or skipping steps.
+         */
+        private boolean isValidStatusTransition(Order order, Status target) {
+            if (order == null || target == null) {
+                return false;
+            }
+
+            Status current = order.getStatus();
+
+            // No-op change
+            if (current == target) {
+                return false;
+            }
+
+            // Allow cancel from any state
+            if (target == Status.Canceled) {
+                return true;
+            }
+
+            // Restore path: allow returning from Canceled to the immediate prior status
+            if (current == Status.Canceled) {
+                Status prior = order.getStatusBeforeCancel();
+                return prior != null && target == prior;
+            }
+
+            // Ordered happy-path statuses
+            List<Status> orderedStatuses = List.of(
+                    Status.Pending,
+                    Status.Confirmed,
+                    Status.Baking,
+                    Status.Ready_for_Shipment,
+                    Status.Shipped,
+                    Status.Delivered
+            );
+
+            int currentIndex = orderedStatuses.indexOf(current);
+            int targetIndex = orderedStatuses.indexOf(target);
+
+            // Only allow a *single step* forward
+            return currentIndex != -1 && targetIndex == currentIndex + 1;
+        }
+
+                /**
+         * Updates the status of an order, enforcing allowed transitions.
+         *
+         * @param orderId   the ID of the order to update
+         * @param newStatus the requested new status
+         * @return Optional<Order> with the updated order, or Optional.empty() if not found
+         * @throws IllegalArgumentException if the transition is not allowed or arguments are invalid
+         */
+        public Optional<Order> updateOrderStatus(String orderId, Status newStatus) {
+            if (orderId == null || orderId.isBlank()) {
+                throw new IllegalArgumentException("Order id is required.");
+            }
+            if (newStatus == null) {
+                throw new IllegalArgumentException("New status is required.");
+            }
+
+            Optional<Order> orderOpt = orderRepository.findById(orderId);
+            if (orderOpt.isEmpty()) {
+                // Covers the "order no longer exists" rainy-day scenario
+                return Optional.empty();
+            }
+
+            Order order = orderOpt.get();
+            Status currentStatus = order.getStatus();
+
+            if (!isValidStatusTransition(order, newStatus)) {
+                throw new IllegalArgumentException(
+                        String.format("Invalid status change from %s to %s.", currentStatus, newStatus)
+                );
+            }
+
+            // Track where we came from when cancelling; clear when restoring
+            if (newStatus == Status.Canceled) {
+                order.setStatusBeforeCancel(currentStatus);
+            } else if (currentStatus == Status.Canceled) {
+                order.setStatusBeforeCancel(null);
+            }
+
+            order.setStatus(newStatus);
+            // Reuse your existing update method (does validation + save)
+            updateOrder(order);
+
+            return Optional.of(order);
+        }
+
+
+//for filtering
+
+/**
+ * Filters orders based on optional parameters.
+ * Always returns a list (empty if no matches) so UI can show the filter bar even with 0 results.
+ */
+
+public List<Order> filterOrders(String search, Status status, String orderFrom, String orderTo, String deliveryDate) {
+    List<Order> result = orderRepository.findAll();
+
+    // --- Filter by search keyword ---
+    if (search != null && !search.isBlank()) {
+        String keyword = search.toLowerCase();
+        result = result.stream()
+                .filter(o ->
+                        o.getId().toLowerCase().contains(keyword) ||
+                        (o.getShippingAddress() != null && o.getShippingAddress().getName().toLowerCase().contains(keyword)) ||
+                        o.getItems().stream().anyMatch(i -> i.name().toLowerCase().contains(keyword))
+                )
+                .toList();
+    }
+
+    // --- Filter by status ---
+    if (status != null) {
+        result = result.stream()
+                .filter(o -> o.getStatus() == status)
+                .toList();
+    }
+
+    // --- Filter by orderDate range (LocalDateTime) ---
+    if (orderFrom != null && !orderFrom.isBlank()) {
+        LocalDateTime fromDateTime = LocalDate.parse(orderFrom).atStartOfDay();
+        result = result.stream()
+                .filter(o -> o.getOrderDate() != null && !o.getOrderDate().isBefore(fromDateTime))
+                .toList();
+    }
+
+    if (orderTo != null && !orderTo.isBlank()) {
+        LocalDateTime toDateTime = LocalDate.parse(orderTo).plusDays(1).atStartOfDay().minusNanos(1);
+        result = result.stream()
+                .filter(o -> o.getOrderDate() != null && !o.getOrderDate().isAfter(toDateTime))
+                .toList();
+    }
+
+    // --- Filter by deliveryDate (LocalDate) ---
+    if (deliveryDate != null && !deliveryDate.isBlank()) {
+        LocalDate d = LocalDate.parse(deliveryDate);
+        result = result.stream()
+                .filter(o -> o.getDeliveryDate() != null &&
+                             !o.getDeliveryDate().isBefore(d) &&
+                             !o.getDeliveryDate().isAfter(d))
+                .toList();
+    }
+
+    return result;
 }
+}
+

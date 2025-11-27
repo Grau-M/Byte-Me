@@ -25,7 +25,7 @@ public class CartController {
     }
 
     @GetMapping
-    public String showCartPage(Model model) {
+    public String showCartPage(Model model, @RequestParam(required = false) String orderId) {
         List<CartItem> items = cartService.getCartItems();
         double subtotal = cartService.getSubtotal();
         double tax = cartService.getTax();
@@ -37,6 +37,9 @@ public class CartController {
         model.addAttribute("tax", tax);
         model.addAttribute("total", total);
         model.addAttribute("cartCount", cartCount);
+        if (orderId != null) {
+            model.addAttribute("orderId", orderId);
+        }
 
         return "cart";
     }

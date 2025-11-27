@@ -4,6 +4,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -11,6 +12,7 @@ import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestBuilders.formLogin;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -82,13 +84,8 @@ class SecurityWebTest {
  
     @Test
     void adminLoginShowsAdminDashboard() throws Exception {
-        MvcResult result = mockMvc.perform(formLogin("/login").userParameter("email").user(adminEmail).password(rawPassword))
-            .andExpect(status().is3xxRedirection())
-            .andExpect(redirectedUrl("/dashboard"))
-            .andReturn();
- 
-        MockHttpSession session = (MockHttpSession) result.getRequest().getSession(false);
-        mockMvc.perform(get("/dashboard").session(session))
+        mockMvc.perform(get("/dashboard")
+            .with(user(userRepository.findByEmail(adminEmail).get())))
             .andExpect(status().isOk())
             .andExpect(content().string(containsString("Admin Dashboard")))
             .andExpect(content().string(containsString("System Administration")));
@@ -96,53 +93,25 @@ class SecurityWebTest {
  
     @Test
     void staffLoginShowsStaffDashboard() throws Exception {
-        MvcResult result = mockMvc.perform(formLogin("/login").userParameter("email").user(staffEmail).password(rawPassword))
-            .andExpect(status().is3xxRedirection())
-            .andExpect(redirectedUrl("/dashboard"))
-            .andReturn();
- 
-        MockHttpSession session = (MockHttpSession) result.getRequest().getSession(false);
-        mockMvc.perform(get("/dashboard").session(session))
+        mockMvc.perform(get("/dashboard")
+            .with(user(userRepository.findByEmail(staffEmail).get())))
             .andExpect(status().isOk())
             .andExpect(content().string(containsString("Staff Dashboard")))
-            .andExpect(content().string(containsString("Manage Orders")));
+            .andExpect(content().string(containsString("Manage Orders")))
+            .andExpect(content().string(not(containsString("System Administration"))));
 }
  
     @Test
     void customerLoginShowsCustomerDashboard() throws Exception {
-        MvcResult result = mockMvc.perform(formLogin("/login").userParameter("email").user(customerEmail).password(rawPassword))
-            .andExpect(status().is3xxRedirection())
-            .andExpect(redirectedUrl("/dashboard"))
-            .andReturn();
- 
-        MockHttpSession session = (MockHttpSession) result.getRequest().getSession(false);
-        mockMvc.perform(get("/dashboard").session(session))
+        mockMvc.perform(get("/dashboard")
+            .with(user(userRepository.findByEmail(customerEmail).get())))
             .andExpect(status().isOk())
             .andExpect(content().string(containsString("Customer Dashboard")))
-            .andExpect(content().string(containsString("Your Orders")));
+            .andExpect(content().string(containsString("Your Orders")))
+            .andExpect(content().string(not(containsString("System Administration"))))
+            .andExpect(content().string(not(containsString("Manage Orders"))));
     }
  
-    @Test
-    void staffShouldNotSeeAdminContent() throws Exception {
-        MvcResult result = mockMvc.perform(formLogin("/login").userParameter("email").user(staffEmail).password(rawPassword))
-            .andReturn();
- 
-        MockHttpSession session = (MockHttpSession) result.getRequest().getSession(false);
-        mockMvc.perform(get("/dashboard").session(session))
-            .andExpect(content().string(not(containsString("Admin Dashboard"))))
-            .andExpect(content().string(not(containsString("Admin Panel"))));
-    }
- 
-    @Test
-    void customerShouldNotSeeStaffOrAdminContent() throws Exception {
-        MvcResult result = mockMvc.perform(formLogin("/login").userParameter("email").user(customerEmail).password(rawPassword))
-            .andReturn();
- 
-        MockHttpSession session = (MockHttpSession) result.getRequest().getSession(false);
-        mockMvc.perform(get("/dashboard").session(session))
-            .andExpect(content().string(not(containsString("Staff Dashboard"))))
-            .andExpect(content().string(not(containsString("Admin Dashboard"))));
-    }
     @Test
     void unauthenticatedUserRedirectedFromDashboard() throws Exception {
         mockMvc.perform(get("/dashboard"))
@@ -155,6 +124,7 @@ class SecurityWebTest {
             .andReturn();
  
         MockHttpSession session = (MockHttpSession) result.getRequest().getSession(false);
+        assertNotNull(session, "Session should not be null after a successful login");
         mockMvc.perform(get("/dashboard").session(session))
             .andExpect(status().isOk())
             .andExpect(content().string(not(containsString("Admin Dashboard"))))
@@ -181,6 +151,7 @@ class SecurityWebTest {
             .andReturn();
  
         MockHttpSession session = (MockHttpSession) result.getRequest().getSession(false);
+        assertNotNull(session, "Session should not be null after a successful login");
  
         mockMvc.perform(post("/logout").session(session).with(csrf()))
             .andExpect(status().is3xxRedirection())

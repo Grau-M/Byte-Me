@@ -428,3 +428,32 @@ footer{
   color: #fde9c9; /* soft cookie-tint white */
   text-shadow: 0 2px 10px rgba(0,0,0,0.45);
 }
+
+/* Orders table spacing */
+.orders-table th,
+.orders-table td {
+  padding: 1rem 0.75rem;
+}
+
+.orders-table tbody tr > th,
+.orders-table tbody tr > td {
+  padding: 1.25rem 0.95rem !important;
+  vertical-align: middle;
+  min-height: 88px;
+}
+
+.orders-table tbody tr {
+  height: 110px !important;
+}
+
+.orders-table .status-select {
+  min-height: 1.8rem;
+}
+
+.status-pending { color: orange; }
+.status-confirmed { color: blue; }
+.status-baking { color: purple; }
+.status-ready_for_shipment { color: gray; }
+.status-shipped { color: green; }
+.status-canceled { color: red; }
+.status-delivered { color: black; }

@@ -1,7 +1,6 @@
 package ca.sheridan.byteme;
 
 import ca.sheridan.byteme.beans.Order;
-import ca.sheridan.byteme.beans.ShippingAddress;
 import ca.sheridan.byteme.controllers.CheckoutController;
 import ca.sheridan.byteme.models.ChargeRequest;
 import ca.sheridan.byteme.services.CartService;
@@ -86,7 +85,7 @@ public class GuestCheckoutTest {
         charge.setAmount((long) ((total + shippingCost) * 100));
         charge.setId("ch_123");
 
-        when(stripeService.charge(any(ChargeRequest.class), any(String.class), any(ShippingAddress.class)))
+        when(stripeService.charge(any(), any(), any()))
                 .thenReturn(charge);
 
         // --- Mock OrderService call ---
@@ -106,6 +105,13 @@ public class GuestCheckoutTest {
                 shippingCountry,
                 shippingCost,
                 deliveryDate,
+                "Jane Doe", // billingName
+                "456 Billing St", // billingAddressLine1
+                "", // billingAddressLine2
+                "Billing City", // billingCity
+                "ON", // billingProvince
+                "B2B 2B2", // billingPostalCode
+                "Canada", // billingCountry
                 model,
                 redirectAttributes
         );

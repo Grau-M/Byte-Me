@@ -69,7 +69,7 @@ public class DashboardControllerTest {
         when(orderService.getOrdersForUser("customerId")).thenReturn(new ArrayList<>());
 
         // Act
-        String viewName = dashboardController.getDashboard(model, principal);
+        String viewName = dashboardController.getDashboard(model, principal, null, null);
 
         // Assert
         assertEquals("dashboard", viewName);
@@ -88,7 +88,7 @@ public class DashboardControllerTest {
         when(cartService.getCartCount()).thenReturn(0);
 
         // Act
-        String viewName = dashboardController.getDashboard(model, principal);
+        String viewName = dashboardController.getDashboard(model, principal, null, null);
 
         // Assert
         assertEquals("dashboard", viewName);
@@ -105,7 +105,7 @@ public class DashboardControllerTest {
         when(principal.getName()).thenReturn("guest");
 
         // Act
-        String viewName = dashboardController.getDashboard(model, principal);
+        String viewName = dashboardController.getDashboard(model, principal, null, null);
 
         // Assert
         assertEquals("dashboard", viewName);

@@ -31,11 +31,13 @@ public class Order {
     private LocalDate deliveryDate;
     private String chargeId;
     private ShippingAddress shippingAddress;
+    private BillingAddress billingAddress;
     private String carrier;         // e.g., "UPS", "FedEx", "USPS"
     private String trackingNumber;
 
     @Builder.Default
     private Status status = Status.Pending;
+    private Status statusBeforeCancel;
 
 
 }

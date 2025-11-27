@@ -132,7 +132,7 @@ public class CheckoutController {
      */
     @PostMapping("/charge")
     public String charge(ChargeRequest chargeRequest,
-                         @RequestParam String stripeToken, // Stripe token is now passed manually
+                         @RequestParam String stripeToken,
                          @RequestParam(name = "guestEmail", required = false) String guestEmail,
                          @RequestParam(name = "shippingName") String shippingName,
                          @RequestParam(name = "shippingAddressLine1") String shippingAddressLine1,
@@ -143,6 +143,13 @@ public class CheckoutController {
                          @RequestParam(name = "shippingCountry") String shippingCountry,
                          @RequestParam(name = "shippingCost") double shippingCost,
                          @RequestParam(name = "deliveryDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate deliveryDate,
+                         @RequestParam(name = "billingName", required = false) String billingName,
+                         @RequestParam(name = "billingAddressLine1", required = false) String billingAddressLine1,
+                         @RequestParam(name = "billingAddressLine2", required = false) String billingAddressLine2,
+                         @RequestParam(name = "billingCity", required = false) String billingCity,
+                         @RequestParam(name = "billingProvince", required = false) String billingProvince,
+                         @RequestParam(name = "billingPostalCode", required = false) String billingPostalCode,
+                         @RequestParam(name = "billingCountry", required = false) String billingCountry,
                          Model model, RedirectAttributes redirectAttributes) throws StripeException {
         
         if (!deliveryDateService.isDateAvailable(deliveryDate)) {
@@ -177,14 +184,25 @@ public class CheckoutController {
                 .country(shippingCountry)
                 .build();
 
-        // 3. Charge the card
+        // 3. Build BillingAddress from form
+        ca.sheridan.byteme.beans.BillingAddress billingAddress = ca.sheridan.byteme.beans.BillingAddress.builder()
+                .name(billingName)
+                .addressLine1(billingAddressLine1)
+                .addressLine2(billingAddressLine2)
+                .city(billingCity)
+                .province(billingProvince)
+                .postalCode(billingPostalCode)
+                .country(billingCountry)
+                .build();
+
+        // 4. Charge the card
         // We pass the *full amount* (which includes shipping) to the charge request
         double total = cartService.getTotal() + shippingCost;
         chargeRequest.setAmount((int) (total * 100));
         
         Charge charge = stripeService.charge(chargeRequest, customerEmail, shippingAddress);
 
-        // 4. Create the Order
+        // 5. Create the Order
         Order order = Order.builder()
                 .userId(user != null ? user.getId() : null)
                 .items(cartService.getCartItems())
@@ -196,6 +214,7 @@ public class CheckoutController {
                 .deliveryDate(deliveryDate)
                 .chargeId(charge.getId())
                 .shippingAddress(shippingAddress) // <-- SAVE ADDRESS
+                .billingAddress(billingAddress) // <-- SAVE BILLING ADDRESS
                 .build();
 
         orderService.createOrder(order);
@@ -247,14 +266,21 @@ public class CheckoutController {
     }
     @PostMapping("/checkout/edit/{orderId}")
     public String saveEditedOrder(@PathVariable String orderId,
-                                @RequestParam String shippingName,
-                                @RequestParam String shippingAddressLine1,
+                                @RequestParam(required = false) String shippingName,
+                                @RequestParam(required = false) String shippingAddressLine1,
                                 @RequestParam(required = false) String shippingAddressLine2,
-                                @RequestParam String shippingCity,
-                                @RequestParam String shippingProvince,
-                                @RequestParam String shippingPostalCode,
-                                @RequestParam String shippingCountry,
+                                @RequestParam(required = false) String shippingCity,
+                                @RequestParam(required = false) String shippingProvince,
+                                @RequestParam(required = false) String shippingPostalCode,
+                                @RequestParam(required = false) String shippingCountry,
                                 @RequestParam(name = "deliveryDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate deliveryDate,
+                                @RequestParam(name = "billingName", required = false) String billingName,
+                                @RequestParam(name = "billingAddressLine1", required = false) String billingAddressLine1,
+                                @RequestParam(name = "billingAddressLine2", required = false) String billingAddressLine2,
+                                @RequestParam(name = "billingCity", required = false) String billingCity,
+                                @RequestParam(name = "billingProvince", required = false) String billingProvince,
+                                @RequestParam(name = "billingPostalCode", required = false) String billingPostalCode,
+                                @RequestParam(name = "billingCountry", required = false) String billingCountry,
                                 RedirectAttributes redirectAttributes) {
 
         Optional<Order> orderOpt = Optional.of(orderService.getOrderById(orderId));
@@ -280,15 +306,21 @@ public class CheckoutController {
                 .country(shippingCountry)
                 .build();
 
+        ca.sheridan.byteme.beans.BillingAddress billingAddress = ca.sheridan.byteme.beans.BillingAddress.builder()
+                .name(billingName)
+                .addressLine1(billingAddressLine1)
+                .addressLine2(billingAddressLine2)
+                .city(billingCity)
+                .province(billingProvince)
+                .postalCode(billingPostalCode)
+                .country(billingCountry)
+                .build();
+
         order.setShippingAddress(updatedAddress);
+        order.setBillingAddress(billingAddress);
         order.setDeliveryDate(deliveryDate);
 
-        // Recalculate shipping cost
-        Optional<Double> shippingCostOpt = shippingService.getShippingCost(updatedAddress);
-        order.setShippingCost(shippingCostOpt.orElse(order.getShippingCost()));
-
-        // Update total
-        order.setTotal(order.getSubtotal() + order.getTax() + order.getShippingCost());
+        orderService.recalculateOrderTotals(order); // New line
 
         orderService.updateOrder(order);
         deliveryDateService.addOrderToDate(deliveryDate);
