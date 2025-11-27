@@ -74,21 +74,65 @@
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
 
-    <!-- Orders table -->
-    <div class="card shadow-sm">
-        <div class="card-header bg-light">
-            <div class="d-flex justify-content-between align-items-center">
-                <span class="fw-semibold">Orders</span>
-                <span class="text-muted small"
-                      th:text="${#lists.size(orders)} + ' orders found'">0 orders found</span>
-            </div>
+      <!-- Filter Bar: always visible -->
+    <form class="row g-3 mb-4" method="get" th:action="@{/orders}">
+        <!-- Search -->
+        <div class="col-md-3">
+            <label class="form-label">Search</label>
+            <input type="text" class="form-control"
+                   name="search"
+                   placeholder="Order ID, Name, Item..."
+                   th:value="${search}">
         </div>
-        <div class="card-body">
-            <div th:if="${#lists.isEmpty(orders)}" class="text-center py-4 text-muted">
-                No orders in the system yet.
-            </div>
 
-            <div th:if="${!#lists.isEmpty(orders)}" class="table-responsive">
+        <!-- Status -->
+        <div class="col-md-2">
+            <label class="form-label">Status</label>
+            <select class="form-select" name="status">
+                <option value="">All</option>
+                <option th:each="s : ${statuses}"
+                        th:value="${s}"
+                        th:text="${#strings.replace(s.name(), '_', ' ')}"
+                        th:selected="${s == selectedStatus}">
+                </option>
+            </select>
+        </div>
+
+        <!-- Order Date From -->
+        <div class="col-md-2">
+            <label class="form-label">Order Date From</label>
+            <input type="date" class="form-control" name="orderFrom"
+                   th:value="${orderFrom}">
+        </div>
+
+        <!-- Order Date To -->
+        <div class="col-md-2">
+            <label class="form-label">Order Date To</label>
+            <input type="date" class="form-control" name="orderTo"
+                   th:value="${orderTo}">
+        </div>
+
+        <!-- Delivery Date -->
+        <div class="col-md-2">
+            <label class="form-label">Delivery Date</label>
+            <input type="date" class="form-control" name="deliveryDate"
+                   th:value="${deliveryDate}">
+        </div>
+
+        <!-- Filter button -->
+        <div class="col-md-1 d-flex align-items-end">
+            <button class="btn btn-primary w-100">
+                <i class="bi bi-search"></i>
+            </button>
+        </div>
+    </form>
+
+    <!-- Orders Table / Message -->
+    <div class="table-responsive">
+        <div th:if="${#lists.isEmpty(orders)}" class="text-center py-4 text-muted">
+            No orders in the system yet.
+        </div>
+
                 <table class="table align-middle orders-table">
                     <thead class="table-light">
                     <tr>

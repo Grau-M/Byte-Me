@@ -247,5 +247,63 @@ public class OrderService {
 
             return Optional.of(order);
         }
+
+
+//for filtering
+
+/**
+ * Filters orders based on optional parameters.
+ * Always returns a list (empty if no matches) so UI can show the filter bar even with 0 results.
+ */
+
+public List<Order> filterOrders(String search, Status status, String orderFrom, String orderTo, String deliveryDate) {
+    List<Order> result = orderRepository.findAll();
+
+    // --- Filter by search keyword ---
+    if (search != null && !search.isBlank()) {
+        String keyword = search.toLowerCase();
+        result = result.stream()
+                .filter(o ->
+                        o.getId().toLowerCase().contains(keyword) ||
+                        (o.getShippingAddress() != null && o.getShippingAddress().getName().toLowerCase().contains(keyword)) ||
+                        o.getItems().stream().anyMatch(i -> i.name().toLowerCase().contains(keyword))
+                )
+                .toList();
+    }
+
+    // --- Filter by status ---
+    if (status != null) {
+        result = result.stream()
+                .filter(o -> o.getStatus() == status)
+                .toList();
+    }
+
+    // --- Filter by orderDate range (LocalDateTime) ---
+    if (orderFrom != null && !orderFrom.isBlank()) {
+        LocalDateTime fromDateTime = LocalDate.parse(orderFrom).atStartOfDay();
+        result = result.stream()
+                .filter(o -> o.getOrderDate() != null && !o.getOrderDate().isBefore(fromDateTime))
+                .toList();
+    }
+
+    if (orderTo != null && !orderTo.isBlank()) {
+        LocalDateTime toDateTime = LocalDate.parse(orderTo).plusDays(1).atStartOfDay().minusNanos(1);
+        result = result.stream()
+                .filter(o -> o.getOrderDate() != null && !o.getOrderDate().isAfter(toDateTime))
+                .toList();
+    }
+
+    // --- Filter by deliveryDate (LocalDate) ---
+    if (deliveryDate != null && !deliveryDate.isBlank()) {
+        LocalDate d = LocalDate.parse(deliveryDate);
+        result = result.stream()
+                .filter(o -> o.getDeliveryDate() != null &&
+                             !o.getDeliveryDate().isBefore(d) &&
+                             !o.getDeliveryDate().isAfter(d))
+                .toList();
+    }
+
+    return result;
+}
 }
 

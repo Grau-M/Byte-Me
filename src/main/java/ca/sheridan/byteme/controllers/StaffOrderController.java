@@ -24,6 +24,12 @@ import java.util.Optional;
  * Staff/Admin order management dashboard.
  * Allows updating the processing status of existing orders.
  */
+
+// -----------------------------
+// GET /orders
+// Fetch and display orders for staff/admin dashboard
+// Filter parameters: search, status, orderFrom, orderTo, deliveryDate
+// -----------------------------
 @Controller
 @RequestMapping("/orders")
 @RequiredArgsConstructor
@@ -34,10 +40,34 @@ public class StaffOrderController {
     
 
     @GetMapping
-    public String showOrders(Model model, Principal principal) {
-        List<Order> orders = orderService.getAllOrders();
-        model.addAttribute("orders", orders);
-        model.addAttribute("statuses", Status.values());
+    public String showOrders(Model model, Principal principal,@RequestParam(required = false) String search,
+                         @RequestParam(required = false) Status status,
+                         @RequestParam(required = false) String orderFrom,
+                         @RequestParam(required = false) String orderTo,
+                         @RequestParam(required = false) String deliveryDate) {
+
+    List<Order> orders;
+    
+    // Use filtering if params exist, else fallback to getAllOrders
+    if (search != null || status != null || orderFrom != null || orderTo != null || deliveryDate != null) {
+        orders = orderService.filterOrders(search, status, orderFrom, orderTo, deliveryDate);
+    } else {
+        orders = orderService.getAllOrders();
+    }
+
+    model.addAttribute("orders", orders);
+    model.addAttribute("statuses", Status.values());
+
+    model.addAttribute("search", search);
+    model.addAttribute("selectedStatus", status);
+    model.addAttribute("orderFrom", orderFrom);
+    model.addAttribute("orderTo", orderTo);
+    model.addAttribute("deliveryDate", deliveryDate);
+        
+        
+      //  List<Order> orders = orderService.getAllOrders();
+      //  model.addAttribute("orders", orders);
+      //  model.addAttribute("statuses", Status.values());
 
         // --- 1. Dynamic Clock (unchanged) ---
         ZoneId userZone = ZoneId.of("America/Toronto");
