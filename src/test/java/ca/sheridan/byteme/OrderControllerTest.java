@@ -16,7 +16,10 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import org.springframework.test.context.ActiveProfiles;
 
+
+@ActiveProfiles("test")
 @ExtendWith(MockitoExtension.class)
 public class OrderControllerTest {
 

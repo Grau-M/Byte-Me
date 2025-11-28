@@ -15,7 +15,10 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
+import org.springframework.test.context.ActiveProfiles;
 
+
+@ActiveProfiles("test")
 @ExtendWith(MockitoExtension.class)
 public class DeliveryDateServiceTest {
 
