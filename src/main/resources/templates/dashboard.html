@@ -215,7 +215,7 @@
         </div>
     </div>
 
-    <div th:if="${#authorization.expression('hasAuthority(''ADMIN'')')}">
+    <div th:if="${#authorization.expression('hasAuthority(''ADMIN'')')}" class="mt-4">
         <div class="card">
             <div class="card-header">
                 Admin Dashboard
@@ -223,7 +223,7 @@
             <div class="card-body">
                 <h5 class="card-title">System Administration</h5>
                 <p class="card-text">Here you can manage users, view reports, and configure the system.</p>
-                <a href="#" class="btn btn-danger">Admin Panel</a>
+                <a href="/adminDashboard" class="btn btn-danger">Admin Panel</a>
             </div>
         </div>
     </div>

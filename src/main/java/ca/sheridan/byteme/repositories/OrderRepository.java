@@ -2,6 +2,7 @@ package ca.sheridan.byteme.repositories;
 
 import ca.sheridan.byteme.beans.Order;
 import ca.sheridan.byteme.beans.Status;
+import org.springframework.data.mongodb.repository.Aggregation;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.data.mongodb.repository.Query;
 
@@ -26,4 +27,17 @@ public interface OrderRepository extends MongoRepository<Order, String> {
     List<Order> findByUserIdAndOrderDateBetween(String userId, LocalDateTime startOfDay, LocalDateTime endOfDay);
 
     List<Order> findByUserIdOrderByOrderDateDesc(String userId);
+
+    // Get sum of totals between two dates
+    @Aggregation(pipeline = {
+        "{ '$match': { 'orderDate': { '$gte': ?0, '$lt': ?1 } } }",
+        "{ '$group': { '_id': null, 'total': { '$sum': '$total' } } }"
+    })
+    Double sumTotalByDateRange(LocalDateTime start, LocalDateTime end);
+
+    // Count by status
+    long countByStatus(Status status);
+
+    // Get top 5 recent
+    List<Order> findTop5ByOrderByOrderDateDesc();
 }

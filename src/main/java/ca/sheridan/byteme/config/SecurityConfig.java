@@ -45,6 +45,7 @@ public class SecurityConfig {
                 ).permitAll()
                 // NEW: staff/admin-only order management
                 .requestMatchers("/orders/**").hasAnyAuthority("STAFF", "ADMIN")
+                .requestMatchers("/adminDashboard").hasAnyAuthority("ADMIN")
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/cart").permitAll()
                 .anyRequest().authenticated()
         )
