@@ -23,7 +23,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import org.springframework.test.context.ActiveProfiles;
 
+
+@ActiveProfiles("test")
 @ExtendWith(MockitoExtension.class)
 public class GuestCheckoutTest {
 

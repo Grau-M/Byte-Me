@@ -25,8 +25,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import ca.sheridan.byteme.beans.Role;
 import ca.sheridan.byteme.beans.User;
 import ca.sheridan.byteme.repositories.UserRepository;
+import org.springframework.test.context.ActiveProfiles;
+
  
- 
+@ActiveProfiles("test")
 @SpringBootTest
 @AutoConfigureMockMvc
 class SecurityWebTest {
