@@ -79,13 +79,15 @@
     <div class="card shadow-sm border-0 mb-4">
         <div class="card-body">
             <form id="filter-form" class="row g-3" method="get" th:action="@{/orders}">
-                <div class="col-md-3">
+                
+                <div class="col-md-2">
                     <label class="form-label text-secondary small text-uppercase fw-bold">Search</label>
                     <div class="input-group">
-                        <span class="input-group-text bg-light border-end-0"><i class="bi bi-search text-muted"></i></span>
-                        <input type="text" class="form-control border-start-0 ps-0" name="search" id="searchInput" placeholder="Order ID, Name..." th:value="${search}">
+                        <span class="input-group-text bg-light border-end-0 px-2"><i class="bi bi-search text-muted"></i></span>
+                        <input type="text" class="form-control border-start-0 ps-0" name="search" id="searchInput" placeholder="ID, Name..." th:value="${search}">
                     </div>
                 </div>
+
                 <div class="col-md-2">
                     <label class="form-label text-secondary small text-uppercase fw-bold">Status</label>
                     <select class="form-select" name="status" id="statusInput">
@@ -93,15 +95,23 @@
                         <option th:each="s : ${statuses}" th:value="${s}" th:text="${#strings.replace(s.name(), '_', ' ')}" th:selected="${s == selectedStatus}"></option>
                     </select>
                 </div>
+
                 <div class="col-md-2">
-                    <label class="form-label text-secondary small text-uppercase fw-bold">From</label>
+                    <label class="form-label text-secondary small text-uppercase fw-bold">Ordered From</label>
                     <input type="date" class="form-control" name="orderFrom" id="dateFromInput" th:value="${orderFrom}">
                 </div>
+
                 <div class="col-md-2">
-                    <label class="form-label text-secondary small text-uppercase fw-bold">To</label>
+                    <label class="form-label text-secondary small text-uppercase fw-bold">Ordered To</label>
                     <input type="date" class="form-control" name="orderTo" id="dateToInput" th:value="${orderTo}">
                 </div>
-                <div class="col-md-3 d-flex align-items-end gap-2">
+
+                <div class="col-md-2">
+                    <label class="form-label text-secondary small text-uppercase fw-bold">Delivery Date</label>
+                    <input type="date" class="form-control" name="deliveryDate" id="deliveryDateInput" th:value="${deliveryDate}">
+                </div>
+
+                <div class="col-md-2 d-flex align-items-end gap-2">
                     <button class="btn btn-primary flex-fill fw-bold">Go</button>
                     <a th:href="@{/orders}" class="btn btn-outline-secondary flex-fill fw-bold" title="Reset Filters">Clear</a>
                 </div>
@@ -136,7 +146,7 @@
                                 
                                 <td th:text="${#temporals.format(order.orderDate, 'MMM dd, yyyy | h:mm a')}" class="text-muted small"></td>
                                 
-                                <td th:text="${order.deliveryDate}" class="text-muted small"></td>
+                                <td th:text="${order.deliveryDate}" class="text-muted small fw-bold text-primary"></td>
                                 <td class="fw-bold text-nowrap text-dark" th:text="'$ ' + ${#numbers.formatDecimal(order.total, 1, 'COMMA', 2, 'POINT')}"></td>
                                 <td>
                                     <span class="badge rounded-pill"
@@ -274,7 +284,6 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', () => {
-        // --- 1. Debounce Function (prevents spamming the server) ---
         function debounce(func, wait) {
             let timeout;
             return function(...args) {
@@ -287,52 +296,37 @@
         const form = document.getElementById('filter-form');
         const contentDiv = document.getElementById('dynamic-content');
 
-        // --- 2. Real-Time Fetch Logic ---
         const fetchOrders = async () => {
-            // Add a visual cue (opacity) that loading is happening
             contentDiv.classList.add('fade-update');
-
             const formData = new FormData(form);
             const params = new URLSearchParams(formData);
             const url = form.action + '?' + params.toString();
-
-            // Update the URL in the browser without reloading
             window.history.replaceState(null, '', url);
 
             try {
                 const response = await fetch(url);
                 const html = await response.text();
-                
-                // Parse the response HTML
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(html, 'text/html');
-                
-                // Extract the new dynamic content
                 const newContent = doc.getElementById('dynamic-content');
-
                 if (newContent) {
                     contentDiv.innerHTML = newContent.innerHTML;
                 }
             } catch (error) {
                 console.error('Error updating orders:', error);
             } finally {
-                // Remove visual cue
                 contentDiv.classList.remove('fade-update');
             }
         };
 
-        // Create a debounced version (waits 400ms after typing)
         const debouncedFetch = debounce(fetchOrders, 400);
 
-        // --- 3. Attach Listeners ---
         const inputs = form.querySelectorAll('input, select');
         inputs.forEach(input => {
             input.addEventListener('input', debouncedFetch);
-            input.addEventListener('change', fetchOrders); // Immediate update for dates/selects
+            input.addEventListener('change', fetchOrders);
         });
 
-        // --- 4. Existing Status Update Logic (Preserved) ---
-        // We use event delegation here because the table rows get replaced dynamically
         contentDiv.addEventListener('submit', (event) => {
             if (event.target.matches('form[data-role="status-form"]')) {
                 const form = event.target;
