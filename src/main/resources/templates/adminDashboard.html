@@ -5,16 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>Cookiegram – Admin Dashboard</title>
 
-    <!-- Fonts & Bootstrap -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
 
-    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    <!-- App styles -->
     <link rel="stylesheet" th:href="@{/css/styles.css}">
     <style>
         body { font-family: 'Poppins', sans-serif; background-color: #f8f9fa; }
@@ -29,12 +26,10 @@
 </head>
 <body>
 
-<!-- Navigation Fragment -->
 <div th:replace="fragments/nav :: dashboardNav"></div>
 
 <main class="container">
     
-    <!-- 1. HEADER -->
     <div class="d-flex align-items-center justify-content-between mb-4">
         <div>
             <h1 class="h3 mb-1 fw-bold">Admin Dashboard</h1>
@@ -46,10 +41,8 @@
         </div>
     </div>
 
-    <!-- 2. KPI CARDS ROW -->
     <div class="row g-3 mb-4">
         
-        <!-- Revenue Card -->
         <div class="col-md-3">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-body">
@@ -72,7 +65,6 @@
             </div>
         </div>
 
-        <!-- Pending Orders Card -->
         <div class="col-md-3">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-body">
@@ -90,7 +82,6 @@
             </div>
         </div>
 
-        <!-- Active/Baking Card -->
         <div class="col-md-3">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-body">
@@ -108,7 +99,6 @@
             </div>
         </div>
 
-        <!-- Total Users Card -->
         <div class="col-md-3">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-body">
@@ -127,9 +117,7 @@
         </div>
     </div>
 
-    <!-- 3. CHARTS ROW -->
     <div class="row g-3 mb-4">
-        <!-- Revenue Chart -->
         <div class="col-lg-8">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-header bg-white border-0 py-3">
@@ -141,7 +129,6 @@
             </div>
         </div>
 
-        <!-- Status Breakdown Chart -->
         <div class="col-lg-4">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-header bg-white border-0 py-3">
@@ -156,7 +143,6 @@
         </div>
     </div>
 
-    <!-- 4. RECENT ORDERS TABLE -->
     <div class="card border-0 shadow-sm">
         <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
             <h6 class="fw-bold mb-0">Recent Orders</h6>
@@ -180,12 +166,16 @@
                         <td class="small text-muted" th:text="${#temporals.format(order.orderDate, 'MMM dd, h:mm a')}"></td>
                         <td th:text="|${'$'}${#numbers.formatDecimal(order.total, 1, 2)}|"></td>
                         <td>
-                            <span class="badge rounded-pill"
+                            <span class="badge rounded-pill fs-6"
                                   th:classappend="${order.status.name() == 'Pending' ? ' bg-warning text-dark' :
+                                                   order.status.name() == 'Confirmed' ? ' bg-info text-dark' :
                                                    order.status.name() == 'Baking' ? ' bg-primary text-light' :
+                                                   order.status.name() == 'Shipped' ? ' bg-success text-light' :
                                                    order.status.name() == 'Delivered' ? ' bg-dark text-light' :
+                                                   order.status.name() == 'Canceled' ? ' bg-danger text-light' :
                                                    ' bg-secondary text-light'}"
-                                  th:text="${order.status}">Status</span>
+                                  th:text="${#strings.replace(order.status.name(), '_', ' ')}">
+                            </span>
                         </td>
                     </tr>
                     <tr th:if="${#lists.isEmpty(recentOrders)}">
@@ -202,13 +192,10 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
-<!-- CHART.JS CONFIGURATION -->
 <script th:inline="javascript">
     /*<![CDATA[*/
     
     // 1. REVENUE CHART CONFIG
-    // Thymeleaf will inject the real data arrays here. 
-    // If null, we default to dummy data for preview purposes.
     const dates = /*[[${chartDates}]]*/ ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     const sales = /*[[${chartSales}]]*/ [1200, 1900, 300, 500, 200, 300, 1250];
 
@@ -237,18 +224,25 @@
         }
     });
 
-    // 2. STATUS CHART CONFIG
-    // Thymeleaf injection for status counts
-    const statusCounts = /*[[${chartStatusCounts}]]*/ [5, 8, 12]; // [Pending, Baking, Delivered/Other]
+    // 2. STATUS CHART CONFIG (Dynamic for ALL Statuses)
+    const statusLabels = /*[[${statusChartLabels}]]*/ ['Pending', 'Baking'];
+    const statusCounts = /*[[${statusChartData}]]*/ [5, 8];
     
     const ctxStatus = document.getElementById('statusChart');
     new Chart(ctxStatus, {
         type: 'doughnut',
         data: {
-            labels: ['Pending', 'Baking', 'Completed'],
+            labels: statusLabels,
             datasets: [{
                 data: statusCounts,
-                backgroundColor: ['#ffc107', '#0d6efd', '#198754'],
+                backgroundColor: [
+                    '#ffc107', // Pending (Warning)
+                    '#0dcaf0', // Confirmed (Info)
+                    '#0d6efd', // Baking (Primary)
+                    '#6610f2', // Shipped (Indigo/Purple)
+                    '#198754', // Delivered (Success)
+                    '#dc3545'  // Canceled (Danger)
+                ],
                 borderWidth: 0
             }]
         },
@@ -256,7 +250,7 @@
             responsive: true,
             cutout: '70%',
             plugins: {
-                legend: { position: 'bottom', labels: { usePointStyle: true } }
+                legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8 } }
             }
         }
     });

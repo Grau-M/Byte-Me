@@ -39,6 +39,11 @@
         .table-hover tbody tr:hover {
             background-color: rgba(0,0,0,0.02);
         }
+        /* Fade transition for the table update */
+        .fade-update {
+            opacity: 0.5;
+            transition: opacity 0.2s ease-in-out;
+        }
     </style>
 </head>
 <body>
@@ -73,180 +78,182 @@
 
     <div class="card shadow-sm border-0 mb-4">
         <div class="card-body">
-            <form class="row g-3" method="get" th:action="@{/orders}">
+            <form id="filter-form" class="row g-3" method="get" th:action="@{/orders}">
                 <div class="col-md-3">
                     <label class="form-label text-secondary small text-uppercase fw-bold">Search</label>
                     <div class="input-group">
                         <span class="input-group-text bg-light border-end-0"><i class="bi bi-search text-muted"></i></span>
-                        <input type="text" class="form-control border-start-0 ps-0" name="search" placeholder="Order ID, Name..." th:value="${search}">
+                        <input type="text" class="form-control border-start-0 ps-0" name="search" id="searchInput" placeholder="Order ID, Name..." th:value="${search}">
                     </div>
                 </div>
                 <div class="col-md-2">
                     <label class="form-label text-secondary small text-uppercase fw-bold">Status</label>
-                    <select class="form-select" name="status">
+                    <select class="form-select" name="status" id="statusInput">
                         <option value="">All Statuses</option>
                         <option th:each="s : ${statuses}" th:value="${s}" th:text="${#strings.replace(s.name(), '_', ' ')}" th:selected="${s == selectedStatus}"></option>
                     </select>
                 </div>
                 <div class="col-md-2">
                     <label class="form-label text-secondary small text-uppercase fw-bold">From</label>
-                    <input type="date" class="form-control" name="orderFrom" th:value="${orderFrom}">
+                    <input type="date" class="form-control" name="orderFrom" id="dateFromInput" th:value="${orderFrom}">
                 </div>
                 <div class="col-md-2">
                     <label class="form-label text-secondary small text-uppercase fw-bold">To</label>
-                    <input type="date" class="form-control" name="orderTo" th:value="${orderTo}">
+                    <input type="date" class="form-control" name="orderTo" id="dateToInput" th:value="${orderTo}">
                 </div>
-                <div class="col-md-1 d-flex align-items-end">
-                    <button class="btn btn-primary w-100 fw-bold">Go</button>
+                <div class="col-md-3 d-flex align-items-end gap-2">
+                    <button class="btn btn-primary flex-fill fw-bold">Go</button>
+                    <a th:href="@{/orders}" class="btn btn-outline-secondary flex-fill fw-bold" title="Reset Filters">Clear</a>
                 </div>
             </form>
         </div>
     </div>
 
-    <div class="card shadow-sm border-0 overflow-hidden">
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table align-middle table-hover mb-0">
-                    <thead class="table-light text-secondary">
-                    <tr>
-                        <th scope="col" class="ps-4">Order ID</th>
-                        <th scope="col">Customer Name</th>
-                        <th scope="col">Order Date</th>
-                        <th scope="col">Delivery Date</th>
-                        <th scope="col">Total</th>
-                        <th scope="col">Current Status</th>
-                        <th scope="col" class="pe-4">Update Status</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                        <tr th:each="order, iterStat : ${orders}" 
-                            th:unless="${#lists.isEmpty(orders)}"
-                            class="cursor-pointer"
-                            th:onclick="'showOrderModal(' + ${iterStat.index} + ')'">
-                            
-                            <td class="ps-4 fw-medium text-secondary" th:text="${#strings.abbreviate(order.id, 12)}"></td>
-                            <td th:text="${order.shippingAddress.name}" class="fw-bold text-dark"></td>
-                            
-                            <td th:text="${#temporals.format(order.orderDate, 'MMM dd, yyyy | h:mm a')}" class="text-muted small"></td>
-                            
-                            <td th:text="${order.deliveryDate}" class="text-muted small"></td>
-                            <td class="fw-bold text-nowrap text-dark" th:text="'$ ' + ${#numbers.formatDecimal(order.total, 1, 'COMMA', 2, 'POINT')}"></td>
-                            <td>
-                                <span class="badge rounded-pill"
-                                    th:classappend="${order.status.name() == 'Pending' ? ' bg-warning text-dark' :
-                                                    order.status.name() == 'Confirmed' ? ' bg-info text-dark' :
-                                                    order.status.name() == 'Baking' ? ' bg-primary text-light' :
-                                                    order.status.name() == 'Shipped' ? ' bg-success text-light' :
-                                                    order.status.name() == 'Delivered' ? ' bg-dark text-light' :
-                                                    order.status.name() == 'Canceled' ? ' bg-danger text-light' :
-                                                    ' bg-secondary text-light'}"
-                                    th:text="${#strings.replace(order.status.name(), '_', ' ')}">Pending</span>
-                            </td>
-                            
-                            <td class="pe-4" onclick="event.stopPropagation()">
-                                <form th:action="@{|/orders/${order.id}/status|}" method="post"
-                                    class="d-flex align-items-center gap-2"
-                                    data-role="status-form">
-                                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
-                                    <select name="status" class="form-select form-select-sm status-select shadow-none border-secondary-subtle">
-                                        <option th:each="status : ${statuses}"
-                                                th:if="${order.status.name() != 'Canceled' or status == order.status}"
-                                                th:value="${status}"
-                                                th:text="${status == order.statusBeforeCancel ? #strings.replace(status.name(), '_', ' ') + ' (Previous)' : #strings.replace(status.name(), '_', ' ')}"
-                                                th:selected="${status == order.status}">
-                                        </option>
-                                    </select>
-                                    <button type="submit" class="btn btn-sm btn-outline-primary">
-                                        <i class="bi bi-check-lg"></i>
-                                    </button>
-                                </form>
-                            </td>
+    <div id="dynamic-content">
+        <div class="card shadow-sm border-0 overflow-hidden">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table align-middle table-hover mb-0">
+                        <thead class="table-light text-secondary">
+                        <tr>
+                            <th scope="col" class="ps-4">Order ID</th>
+                            <th scope="col">Customer Name</th>
+                            <th scope="col">Order Date</th>
+                            <th scope="col">Delivery Date</th>
+                            <th scope="col">Total</th>
+                            <th scope="col">Current Status</th>
+                            <th scope="col" class="pe-4">Update Status</th>
                         </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="order, iterStat : ${orders}" 
+                                th:unless="${#lists.isEmpty(orders)}"
+                                class="cursor-pointer"
+                                th:onclick="'showOrderModal(' + ${iterStat.index} + ')'">
+                                
+                                <td class="ps-4 fw-medium text-secondary" th:text="${#strings.abbreviate(order.id, 12)}"></td>
+                                <td th:text="${order.shippingAddress.name}" class="fw-bold text-dark"></td>
+                                
+                                <td th:text="${#temporals.format(order.orderDate, 'MMM dd, yyyy | h:mm a')}" class="text-muted small"></td>
+                                
+                                <td th:text="${order.deliveryDate}" class="text-muted small"></td>
+                                <td class="fw-bold text-nowrap text-dark" th:text="'$ ' + ${#numbers.formatDecimal(order.total, 1, 'COMMA', 2, 'POINT')}"></td>
+                                <td>
+                                    <span class="badge rounded-pill"
+                                        th:classappend="${order.status.name() == 'Pending' ? ' bg-warning text-dark' :
+                                                        order.status.name() == 'Confirmed' ? ' bg-info text-dark' :
+                                                        order.status.name() == 'Baking' ? ' bg-primary text-light' :
+                                                        order.status.name() == 'Shipped' ? ' bg-success text-light' :
+                                                        order.status.name() == 'Delivered' ? ' bg-dark text-light' :
+                                                        order.status.name() == 'Canceled' ? ' bg-danger text-light' :
+                                                        ' bg-secondary text-light'}"
+                                        th:text="${#strings.replace(order.status.name(), '_', ' ')}">Pending</span>
+                                </td>
+                                
+                                <td class="pe-4" onclick="event.stopPropagation()">
+                                    <form th:action="@{|/orders/${order.id}/status|}" method="post"
+                                        class="d-flex align-items-center gap-2"
+                                        data-role="status-form">
+                                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                                        <select name="status" class="form-select form-select-sm status-select shadow-none border-secondary-subtle">
+                                            <option th:each="status : ${statuses}"
+                                                    th:if="${order.status.name() != 'Canceled' or status == order.status}"
+                                                    th:value="${status}"
+                                                    th:text="${status == order.statusBeforeCancel ? #strings.replace(status.name(), '_', ' ') + ' (Previous)' : #strings.replace(status.name(), '_', ' ')}"
+                                                    th:selected="${status == order.status}">
+                                            </option>
+                                        </select>
+                                        <button type="submit" class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-check-lg"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
 
-                        <tr th:if="${#lists.isEmpty(orders)}">
-                            <td colspan="7" class="text-center py-5">
-                                <div class="text-muted">
-                                    <i class="bi bi-inbox fs-1 d-block mb-3"></i>
-                                    <h5 class="fw-normal">No orders found</h5>
-                                    <p class="small mb-0">Try adjusting your filters or search query.</p>
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+                            <tr th:if="${#lists.isEmpty(orders)}">
+                                <td colspan="7" class="text-center py-5">
+                                    <div class="text-muted">
+                                        <i class="bi bi-inbox fs-1 d-block mb-3"></i>
+                                        <h5 class="fw-normal">No orders found</h5>
+                                        <p class="small mb-0">Try adjusting your filters or search query.</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
-    </div>
-</main>
 
-<div th:each="order, iterStat : ${orders}" 
-     th:id="'modal-' + ${iterStat.index}" 
-     class="modal fade" 
-     tabindex="-1" 
-     aria-hidden="true">
-     
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow">
-            
-            <div class="modal-header bg-light">
-                <div>
-                    <h5 class="modal-title fw-bold" th:text="'Order #' + ${order.id}"></h5>
-                    <span class="text-muted small">Created on <span th:text="${#temporals.format(order.orderDate, 'MMM dd, yyyy | h:mm a')}"></span></span>
-                </div>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-
-            <div class="modal-body p-4">
-                <div class="row g-4">
+        <div th:each="order, iterStat : ${orders}" 
+             th:id="'modal-' + ${iterStat.index}" 
+             class="modal fade" 
+             tabindex="-1" 
+             aria-hidden="true">
+             
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow">
                     
-                    <div class="col-6">
-                        <label class="small text-muted text-uppercase fw-bold mb-1">Customer Name</label>
-                        <div class="d-flex align-items-center">
-                            <i class="bi bi-person-circle text-secondary me-2 fs-5"></i>
-                            <span class="fw-bold text-dark fs-5" th:text="${order.shippingAddress != null ? order.shippingAddress.name : 'Unknown'}"></span>
-                        </div>
-                    </div>
-
-                    <div class="col-6">
-                        <label class="small text-muted text-uppercase fw-bold mb-1">Delivery Date</label>
-                        <div class="d-flex align-items-center">
-                            <i class="bi bi-calendar-event text-secondary me-2 fs-5"></i>
-                            <span class="fw-bold text-dark fs-5" th:text="${order.deliveryDate}"></span>
-                        </div>
-                    </div>
-
-                    <div class="col-6">
-                        <label class="small text-muted text-uppercase fw-bold mb-1">Total</label>
-                        <div class="fs-4 fw-bold text-primary" 
-                             th:text="'$ ' + ${#numbers.formatDecimal(order.total, 1, 'COMMA', 2, 'POINT')}">
-                        </div>
-                    </div>
-
-                    <div class="col-6">
-                        <label class="small text-muted text-uppercase fw-bold mb-1">Current Status</label>
+                    <div class="modal-header bg-light">
                         <div>
-                            <span class="badge rounded-pill fs-6"
-                                  th:classappend="${order.status.name() == 'Pending' ? ' bg-warning text-dark' :
-                                                   order.status.name() == 'Confirmed' ? ' bg-info text-dark' :
-                                                   order.status.name() == 'Baking' ? ' bg-primary text-light' :
-                                                   order.status.name() == 'Shipped' ? ' bg-success text-light' :
-                                                   order.status.name() == 'Delivered' ? ' bg-dark text-light' :
-                                                   order.status.name() == 'Canceled' ? ' bg-danger text-light' :
-                                                   ' bg-secondary text-light'}"
-                                  th:text="${#strings.replace(order.status.name(), '_', ' ')}">
-                            </span>
+                            <h5 class="modal-title fw-bold" th:text="'Order #' + ${order.id}"></h5>
+                            <span class="text-muted small">Created on <span th:text="${#temporals.format(order.orderDate, 'MMM dd, yyyy | h:mm a')}"></span></span>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+
+                    <div class="modal-body p-4">
+                        <div class="row g-4">
+                            
+                            <div class="col-6">
+                                <label class="small text-muted text-uppercase fw-bold mb-1">Customer Name</label>
+                                <div class="d-flex align-items-center">
+                                    <i class="bi bi-person-circle text-secondary me-2 fs-5"></i>
+                                    <span class="fw-bold text-dark fs-5" th:text="${order.shippingAddress != null ? order.shippingAddress.name : 'Unknown'}"></span>
+                                </div>
+                            </div>
+
+                            <div class="col-6">
+                                <label class="small text-muted text-uppercase fw-bold mb-1">Delivery Date</label>
+                                <div class="d-flex align-items-center">
+                                    <i class="bi bi-calendar-event text-secondary me-2 fs-5"></i>
+                                    <span class="fw-bold text-dark fs-5" th:text="${order.deliveryDate}"></span>
+                                </div>
+                            </div>
+
+                            <div class="col-6">
+                                <label class="small text-muted text-uppercase fw-bold mb-1">Total</label>
+                                <div class="fs-4 fw-bold text-primary" 
+                                     th:text="'$ ' + ${#numbers.formatDecimal(order.total, 1, 'COMMA', 2, 'POINT')}">
+                                </div>
+                            </div>
+
+                            <div class="col-6">
+                                <label class="small text-muted text-uppercase fw-bold mb-1">Current Status</label>
+                                <div>
+                                    <span class="badge rounded-pill fs-6"
+                                          th:classappend="${order.status.name() == 'Pending' ? ' bg-warning text-dark' :
+                                                           order.status.name() == 'Confirmed' ? ' bg-info text-dark' :
+                                                           order.status.name() == 'Baking' ? ' bg-primary text-light' :
+                                                           order.status.name() == 'Shipped' ? ' bg-success text-light' :
+                                                           order.status.name() == 'Delivered' ? ' bg-dark text-light' :
+                                                           order.status.name() == 'Canceled' ? ' bg-danger text-light' :
+                                                           ' bg-secondary text-light'}"
+                                          th:text="${#strings.replace(order.status.name(), '_', ' ')}">
+                                    </span>
+                                </div>
+                            </div>
+                            
                         </div>
                     </div>
-                    
+
+                    <div class="modal-footer bg-light border-0">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    </div>
                 </div>
             </div>
-
-            <div class="modal-footer bg-light border-0">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-            </div>
         </div>
-    </div>
-</div>
+    </div> </main>
 
 <div th:replace="fragments/nav :: bottomNav"></div>
 
@@ -254,10 +261,8 @@
 
 <script>
     function showOrderModal(index) {
-        // Find the modal by its simple index ID (modal-0, modal-1, etc.)
         const modalId = 'modal-' + index;
         const modalElement = document.getElementById(modalId);
-        
         if (modalElement) {
             const modalInstance = new bootstrap.Modal(modalElement);
             modalInstance.show();
@@ -269,20 +274,76 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', () => {
-        const statusForms = document.querySelectorAll('form[data-role="status-form"]');
-        statusForms.forEach((form) => {
-            form.addEventListener('submit', (event) => {
-                const statusSelect = form.querySelector('select[name="status"]');
-                if (!statusSelect) return;
+        // --- 1. Debounce Function (prevents spamming the server) ---
+        function debounce(func, wait) {
+            let timeout;
+            return function(...args) {
+                const context = this;
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(context, args), wait);
+            };
+        }
 
-                const nextStatus = statusSelect.value;
-                if (nextStatus === 'Canceled') {
+        const form = document.getElementById('filter-form');
+        const contentDiv = document.getElementById('dynamic-content');
+
+        // --- 2. Real-Time Fetch Logic ---
+        const fetchOrders = async () => {
+            // Add a visual cue (opacity) that loading is happening
+            contentDiv.classList.add('fade-update');
+
+            const formData = new FormData(form);
+            const params = new URLSearchParams(formData);
+            const url = form.action + '?' + params.toString();
+
+            // Update the URL in the browser without reloading
+            window.history.replaceState(null, '', url);
+
+            try {
+                const response = await fetch(url);
+                const html = await response.text();
+                
+                // Parse the response HTML
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                
+                // Extract the new dynamic content
+                const newContent = doc.getElementById('dynamic-content');
+
+                if (newContent) {
+                    contentDiv.innerHTML = newContent.innerHTML;
+                }
+            } catch (error) {
+                console.error('Error updating orders:', error);
+            } finally {
+                // Remove visual cue
+                contentDiv.classList.remove('fade-update');
+            }
+        };
+
+        // Create a debounced version (waits 400ms after typing)
+        const debouncedFetch = debounce(fetchOrders, 400);
+
+        // --- 3. Attach Listeners ---
+        const inputs = form.querySelectorAll('input, select');
+        inputs.forEach(input => {
+            input.addEventListener('input', debouncedFetch);
+            input.addEventListener('change', fetchOrders); // Immediate update for dates/selects
+        });
+
+        // --- 4. Existing Status Update Logic (Preserved) ---
+        // We use event delegation here because the table rows get replaced dynamically
+        contentDiv.addEventListener('submit', (event) => {
+            if (event.target.matches('form[data-role="status-form"]')) {
+                const form = event.target;
+                const statusSelect = form.querySelector('select[name="status"]');
+                if (statusSelect && statusSelect.value === 'Canceled') {
                     const confirmed = window.confirm('Are you sure you want to cancel this order?');
                     if (!confirmed) {
                         event.preventDefault();
                     }
                 }
-            });
+            }
         });
     });
 </script>

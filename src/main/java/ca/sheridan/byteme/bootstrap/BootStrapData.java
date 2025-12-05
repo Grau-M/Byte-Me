@@ -2,7 +2,9 @@ package ca.sheridan.byteme.bootstrap;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
@@ -44,7 +46,6 @@ public class BootStrapData implements CommandLineRunner {
                     .role(Role.ADMIN)
                     .build();
             userRepository.save(admin);
-            System.out.println("Inserted demo user: " + adminEmail + " / Password123!");
         }
 
         String staffEmail = "staff@cookie.com";
@@ -56,7 +57,6 @@ public class BootStrapData implements CommandLineRunner {
                     .role(Role.STAFF)
                     .build();
             userRepository.save(staff);
-            System.out.println("Inserted test user: " + staffEmail + " / Password123!");
         }
 
         String customerEmail = "customer@cookie.com";
@@ -69,9 +69,22 @@ public class BootStrapData implements CommandLineRunner {
                     .role(Role.CUSTOMER)
                     .build();
             userRepository.save(customer);
-            System.out.println("Inserted test user: " + customerEmail + " / Password123!");
         } else {
             customer = userRepository.findByEmail(customerEmail).get();
+        }
+
+        String anotherEmail = "another@cookie.com";
+        User anotherCustomer;
+        if (userRepository.findByEmail(anotherEmail).isEmpty()) {
+            anotherCustomer = User.builder()
+                    .name("Another Customer")
+                    .email(anotherEmail)
+                    .password(passwordEncoder.encode("Password123!"))
+                    .role(Role.CUSTOMER)
+                    .build();
+            userRepository.save(anotherCustomer);
+        } else {
+            anotherCustomer = userRepository.findByEmail(anotherEmail).get();
         }
 
         // --- seed a couple of promotions (only if none exist) ---
@@ -97,82 +110,130 @@ public class BootStrapData implements CommandLineRunner {
                     .active(true)
                     .build()
             ));
-            System.out.println("Seeded demo promotions.");
         }
 
-        // --- seed a couple of orders (only if none exist for this customer) ---
-        if (orderRepository.findByUserId(customer.getId()).isEmpty()) {
-            CartItem item1 = new CartItem("prod_12345", "Large Cookiegram", "Happy Birthday!", "Royal Blue", "#4169E1", 29.99);
-            CartItem item2 = new CartItem("prod_67890", "Large Cookiegram", "Get Well Soon!", "Green", "#008000", 24.99);
-            CartItem item3 = new CartItem("prod_ABCDE", "Small Cookiegram", "Congratulations!", "Red", "#FF0000", 19.99);
-
-            Order order1 = Order.builder()
-                .id("ORD001")
-                .userId(customer.getId())
-                .items(List.of(item1))
-                .subtotal(29.99)
-                .tax(3.90)
-                .shippingCost(5.00)
-                .total(38.89)
-                .orderDate(LocalDateTime.now().minusDays(10))
-                .deliveryDate(LocalDate.now().minusDays(7))
-                .status(Status.Delivered)
-                .shippingAddress(ShippingAddress.builder().name("Customer User").addressLine1("123 Main St").city("Toronto").province("ON").postalCode("M1M1M1").country("Canada").build())
-                .billingAddress(BillingAddress.builder().name("Customer User").addressLine1("123 Main St").city("Toronto").province("ON").postalCode("M1M1M1").country("Canada").build())
-                .build();
-            
-            Order order2 = Order.builder()
-                .id("ORD002")
-                .userId(customer.getId())
-                .items(List.of(item2))
-                .subtotal(24.99)
-                .tax(3.25)
-                .shippingCost(5.00)
-                .total(33.24)
-                .orderDate(LocalDateTime.now().minusDays(2))
-                .deliveryDate(LocalDate.now().plusDays(1))
-                .status(Status.Shipped)
-                .shippingAddress(ShippingAddress.builder().name("Customer User").addressLine1("456 Oak St").city("Mississauga").province("ON").postalCode("L5B2C9").country("Canada").build())
-                .billingAddress(BillingAddress.builder().name("Customer User").addressLine1("456 Oak St").city("Mississauga").province("ON").postalCode("L5B2C9").country("Canada").build())
-                .carrier("FedEx")
-                .trackingNumber("123456789")
-                .build();
-
-            Order order3 = Order.builder()
-                .id("ORD003")
-                .userId(customer.getId())
-                .items(List.of(item3))
-                .subtotal(19.99)
-                .tax(2.60)
-                .shippingCost(5.00)
-                .total(27.59)
-                .orderDate(LocalDateTime.now().minusDays(1))
-                .deliveryDate(LocalDate.now().plusDays(2))
-                .status(Status.Baking)
-                .shippingAddress(ShippingAddress.builder().name("Customer User").addressLine1("789 Pine St").city("Brampton").province("ON").postalCode("L6T0G8").country("Canada").build())
-                .billingAddress(BillingAddress.builder().name("Customer User").addressLine1("789 Pine St").city("Brampton").province("ON").postalCode("L6T0G8").country("Canada").build())
-                .build();
-
-            // Order for another user to test security
-            User anotherCustomer = User.builder().name("Another Customer").email("another@cookie.com").password(passwordEncoder.encode("Password123!")).role(Role.CUSTOMER).build();
-            userRepository.save(anotherCustomer);
-            Order anotherOrder = Order.builder()
-                .id("ORD004")
-                .userId(anotherCustomer.getId())
-                .items(List.of(new CartItem("prod_XYZ", "Large Cookiegram", "Secret Message", "Black", "#000000", 29.99)))
-                .subtotal(29.99)
-                .tax(3.90)
-                .shippingCost(5.00)
-                .total(38.89)
-                .orderDate(LocalDateTime.now().minusDays(5))
-                .deliveryDate(LocalDate.now().minusDays(2))
-                .status(Status.Delivered)
-                .shippingAddress(ShippingAddress.builder().name("Another Customer").addressLine1("1 Hacker Way").city("Menlo Park").province("CA").postalCode("94025").country("USA").build())
-                .billingAddress(BillingAddress.builder().name("Another Customer").addressLine1("1 Hacker Way").city("Menlo Park").province("CA").postalCode("94025").country("USA").build())
-                .build();
-
-            orderRepository.saveAll(List.of(order1, order2, order3, anotherOrder));
-            System.out.println("Seeded demo orders for customer.");
+        // --- SEED ORDERS FOR DEMO GRAPH ---
+        // We clear existing orders to ensure the graph looks exactly how we want it
+        if (orderRepository.count() > 0) {
+            orderRepository.deleteAll();
+            System.out.println("Cleared existing orders to ensure clean demo graph.");
         }
+
+        List<Order> demoOrders = new ArrayList<>();
+        int orderCounter = 1000;
+
+        // --- NOV 29 (Day 1): Baseline - 2 Orders ---
+        demoOrders.add(createDemoOrder(++orderCounter, customer, 29, 11, 1, Status.Delivered));
+        demoOrders.add(createDemoOrder(++orderCounter, anotherCustomer, 29, 14, 2, Status.Delivered));
+
+        // --- NOV 30 (Day 2): Small Rise - 3 Orders ---
+        demoOrders.add(createDemoOrder(++orderCounter, customer, 30, 9, 1, Status.Delivered));
+        demoOrders.add(createDemoOrder(++orderCounter, anotherCustomer, 30, 10, 1, Status.Delivered));
+        demoOrders.add(createDemoOrder(++orderCounter, customer, 30, 16, 1, Status.Delivered));
+
+        // --- DEC 01 (Day 3): The Dip (Monday lull) - 1 Order ---
+        demoOrders.add(createDemoOrder(++orderCounter, anotherCustomer, 1, 12, 1, Status.Delivered));
+
+        // --- DEC 02 (Day 4): Recovery - 3 Orders ---
+        demoOrders.add(createDemoOrder(++orderCounter, customer, 2, 10, 1, Status.Shipped));
+        demoOrders.add(createDemoOrder(++orderCounter, customer, 2, 13, 1, Status.Shipped));
+        demoOrders.add(createDemoOrder(++orderCounter, anotherCustomer, 2, 15, 1, Status.Shipped));
+
+        // --- DEC 03 (Day 5): Growth - 4 Orders ---
+        demoOrders.add(createDemoOrder(++orderCounter, customer, 3, 9, 1, Status.Shipped));
+        demoOrders.add(createDemoOrder(++orderCounter, anotherCustomer, 3, 11, 2, Status.Shipped)); // High value
+        demoOrders.add(createDemoOrder(++orderCounter, customer, 3, 14, 1, Status.Shipped));
+        demoOrders.add(createDemoOrder(++orderCounter, anotherCustomer, 3, 16, 1, Status.Baking));
+
+        // --- DEC 04 (Day 6 - Yesterday): Moderate - 3 Orders (~$157 Revenue) ---
+        // We keep this moderate so Today looks like a huge spike (150%+)
+        demoOrders.add(createDemoOrder(++orderCounter, customer, 4, 10, 1, Status.Baking));
+        demoOrders.add(createDemoOrder(++orderCounter, anotherCustomer, 4, 12, 1, Status.Baking));
+        demoOrders.add(createDemoOrder(++orderCounter, customer, 4, 15, 1, Status.Pending));
+
+        // --- DEC 05 (Day 7 - Today): THE SPIKE - 8 Orders (High Revenue) ---
+        // Mix of single and double orders to drive revenue up massively
+        demoOrders.add(createDemoOrder(++orderCounter, customer, 5, 8, 1, Status.Baking));
+        demoOrders.add(createDemoOrder(++orderCounter, anotherCustomer, 5, 9, 2, Status.Baking)); // Big order
+        demoOrders.add(createDemoOrder(++orderCounter, customer, 5, 10, 1, Status.Baking));
+        demoOrders.add(createDemoOrder(++orderCounter, anotherCustomer, 5, 11, 1, Status.Pending));
+        demoOrders.add(createDemoOrder(++orderCounter, customer, 5, 12, 2, Status.Confirmed)); // Big order
+        demoOrders.add(createDemoOrder(++orderCounter, anotherCustomer, 5, 13, 1, Status.Shipped));
+        demoOrders.add(createDemoOrder(++orderCounter, customer, 5, 14, 1, Status.Ready_for_Shipment));
+        demoOrders.add(createDemoOrder(++orderCounter, anotherCustomer, 5, 15, 1, Status.Delivered));
+
+        orderRepository.saveAll(demoOrders);
+        System.out.println("Seeded " + demoOrders.size() + " orders for the Demo Graph (Nov 29 - Dec 05).");
+    }
+
+    /**
+     * Helper to create a realistic order with strict pricing rules.
+     * Price: $34.99 per cookie.
+     * Tax: 13% of subtotal.
+     * Shipping: $12.99 flat.
+     */
+    private Order createDemoOrder(int idSuffix, User user, int dayOfMonth, int hour, int quantity, Status status) {
+        double pricePerCookie = 34.99;
+        double shippingRate = 12.99;
+        double taxRate = 0.13;
+
+        // 1. Calculate Subtotal
+        double subtotal = pricePerCookie * quantity;
+
+        // 2. Calculate Tax
+        double tax = subtotal * taxRate;
+
+        // 3. Calculate Total
+        double total = subtotal + tax + shippingRate;
+
+        // Rounding to 2 decimal places to ensure clean data
+        subtotal = Math.round(subtotal * 100.0) / 100.0;
+        tax = Math.round(tax * 100.0) / 100.0;
+        total = Math.round(total * 100.0) / 100.0;
+
+        // Create Cart Items based on quantity
+        List<CartItem> items = new ArrayList<>();
+        for (int i = 0; i < quantity; i++) {
+            items.add(new CartItem("prod_" + idSuffix + "_" + i,
+                    "Large Cookiegram",
+                    i == 0 ? "Happy Birthday!" : "Congrats!", // Vary message slightly
+                    "Classic White",
+                    "#FFFFFF",
+                    pricePerCookie));
+        }
+
+        // Handle Date Logic (Nov vs Dec)
+        int month = (dayOfMonth >= 29) ? 11 : 12; // 11=Nov, 12=Dec
+        int year = 2025;
+        LocalDateTime orderDateTime = LocalDateTime.of(year, month, dayOfMonth, hour, 0);
+
+        return Order.builder()
+                .id("ORD" + idSuffix)
+                .userId(user.getId())
+                .items(items)
+                .subtotal(subtotal)
+                .tax(tax)
+                .shippingCost(shippingRate)
+                .total(total)
+                .orderDate(orderDateTime)
+                .deliveryDate(orderDateTime.toLocalDate().plusDays(3))
+                .status(status)
+                .shippingAddress(ShippingAddress.builder()
+                        .name(user.getName())
+                        .addressLine1("123 Demo Lane")
+                        .city("Toronto")
+                        .province("ON")
+                        .postalCode("M5V 2H1")
+                        .country("Canada")
+                        .build())
+                .billingAddress(BillingAddress.builder()
+                        .name(user.getName())
+                        .addressLine1("123 Demo Lane")
+                        .city("Toronto")
+                        .province("ON")
+                        .postalCode("M5V 2H1")
+                        .country("Canada")
+                        .build())
+                .build();
     }
 }

@@ -25,7 +25,6 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 @AllArgsConstructor
@@ -40,13 +39,13 @@ public class DashboardController {
 
     @GetMapping("/dashboard")
     public String getDashboard(Model model, Principal principal,
-        @RequestParam(required = false) String search,
-        @RequestParam(required = false) String filter) {
+                               @RequestParam(required = false) String search,
+                               @RequestParam(required = false) String filter) {
 
         // --- Add Cart Count ---
         model.addAttribute("cartCount", cartService.getCartCount());
 
-        // --- 1. Dynamic Clock (unchanged) ---
+        // --- 1. Dynamic Clock ---
         ZoneId userZone = ZoneId.of("America/Toronto");
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication != null && authentication.getPrincipal() instanceof User) {
@@ -55,26 +54,20 @@ public class DashboardController {
                 userZone = ZoneId.of(currentUser.getTimezone());
             }
 
-            // ---- 2. Only for CUSTOMERS: add promotions and orders fetched from MongoDB ----
+            // ---- 2. Only for CUSTOMERS ----
             if (currentUser.getRole() == Role.CUSTOMER) {
                 model.addAttribute("promotions", promotionService.getActivePromotionsForToday());
 
-                List < Order > orders;
+                List<Order> orders;
                 if (search != null && !search.isEmpty()) {
                     orders = orderService.searchOrders(currentUser.getId(), search);
-                    if (orders.isEmpty()) {
-                        model.addAttribute("message", "No orders found matching your criteria");
-                    }
+                    if (orders.isEmpty()) model.addAttribute("message", "No orders found matching your criteria");
                 } else if (filter != null && !filter.isEmpty()) {
                     orders = orderService.filterOrders(currentUser.getId(), filter);
-                    if (orders.isEmpty()) {
-                        model.addAttribute("message", "No orders found matching your criteria");
-                    }
+                    if (orders.isEmpty()) model.addAttribute("message", "No orders found matching your criteria");
                 } else {
                     orders = orderService.getOrdersForUser(currentUser.getId());
-                    if (orders.isEmpty()) {
-                        model.addAttribute("message", "You haven't placed any orders yet. Start shopping!");
-                    }
+                    if (orders.isEmpty()) model.addAttribute("message", "You haven't placed any orders yet. Start shopping!");
                 }
                 model.addAttribute("orders", orders);
             }
@@ -95,32 +88,27 @@ public class DashboardController {
     public String getAdminDashboard(Model model) {
 
         // --- 1. KPI CARDS DATA ---
-
-        // Calculate Today's Revenue
         LocalDate today = LocalDate.now();
         LocalDateTime startOfToday = today.atStartOfDay();
         Double revenueToday = orderRepository.sumTotalByDateRange(startOfToday, LocalDateTime.now());
         revenueToday = (revenueToday == null) ? 0.0 : revenueToday;
 
-        // Calculate Yesterday's Revenue
         LocalDate yesterday = today.minusDays(1);
         LocalDateTime startOfYesterday = yesterday.atStartOfDay();
         LocalDateTime endOfYesterday = today.atStartOfDay();
         Double revenueYesterday = orderRepository.sumTotalByDateRange(startOfYesterday, endOfYesterday);
         revenueYesterday = (revenueYesterday == null) ? 0.0 : revenueYesterday;
 
-        // Calculate Percentage Change
         double percentageChange = 0.0;
         if (revenueYesterday > 0) {
             percentageChange = ((revenueToday - revenueYesterday) / revenueYesterday) * 100;
         } else if (revenueToday > 0) {
-            percentageChange = 100.0; // If yesterday was 0 and today is > 0, it's a 100% increase
+            percentageChange = 100.0;
         }
 
         model.addAttribute("revenueToday", revenueToday);
         model.addAttribute("revenueChange", percentageChange);
 
-        // Counts
         long pendingCount = orderRepository.countByStatus(Status.Pending);
         long bakingCount = orderRepository.countByStatus(Status.Baking);
         long totalUsers = userRepository.count();
@@ -130,22 +118,18 @@ public class DashboardController {
         model.addAttribute("totalUsers", totalUsers);
 
         // --- 2. RECENT ORDERS TABLE ---
-        // Fetch top 5 most recent orders
-        List < Order > recentOrders = orderRepository.findTop5ByOrderByOrderDateDesc();
+        List<Order> recentOrders = orderRepository.findTop5ByOrderByOrderDateDesc();
         model.addAttribute("recentOrders", recentOrders);
 
-        // --- 3. CHART DATA (Simple Implementation) ---
+        // --- 3. CHART DATA ---
 
-        // Line Chart: Last 7 Days Labels
-        List < String > chartDates = new ArrayList < > ();
-        List < Double > chartSales = new ArrayList < > ();
+        // A. Line Chart (Revenue Last 7 Days)
+        List<String> chartDates = new ArrayList<>();
+        List<Double> chartSales = new ArrayList<>();
 
         for (int i = 6; i >= 0; i--) {
             LocalDate date = today.minusDays(i);
             chartDates.add(date.format(DateTimeFormatter.ofPattern("MMM dd")));
-
-            // You need a repository method to get sum for a specific day
-            // This is pseudo-code; implementation depends on your Repo
             Double dailySum = orderRepository.sumTotalByDateRange(date.atStartOfDay(), date.plusDays(1).atStartOfDay());
             chartSales.add(dailySum != null ? dailySum : 0.0);
         }
@@ -153,11 +137,18 @@ public class DashboardController {
         model.addAttribute("chartDates", chartDates);
         model.addAttribute("chartSales", chartSales);
 
-        // Doughnut Chart: [Pending, Baking, Completed]
-        // You can group 'Shipped' and 'Delivered' into 'Completed' for the chart
-        long completedCount = orderRepository.countByStatus(Status.Delivered) + orderRepository.countByStatus(Status.Shipped);
-        List < Long > statusCounts = Arrays.asList(pendingCount, bakingCount, completedCount);
-        model.addAttribute("chartStatusCounts", statusCounts);
+        // B. Doughnut Chart (ALL Statuses) - UPDATED
+        List<String> statusLabels = new ArrayList<>();
+        List<Long> statusData = new ArrayList<>();
+
+        // Loop through every Status enum value to get dynamic counts
+        for (Status status : Status.values()) {
+            statusLabels.add(status.name()); // e.g. "Pending", "Baking"
+            statusData.add(orderRepository.countByStatus(status));
+        }
+
+        model.addAttribute("statusChartLabels", statusLabels);
+        model.addAttribute("statusChartData", statusData);
 
         return "adminDashboard";
     }
